@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MyNameis</title>
+  <style>
+    :root{ --card-w:360px; }
+    *{ box-sizing:border-box }
+    body{
+      margin:0; padding:0; min-height:100vh;
+      font-family:"Pretendard",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+      display:flex; justify-content:center; align-items:center;
+      background:url("https://img.freepik.com/premium-photo/abstract-background-design-hd-olive-green-color_851755-74064.jpg?semt=ais_hybrid&w=740&q=80") no-repeat center/cover fixed;
+      position:relative;
+    }
+    /* 기본값은 CSS에서 .35, JS로 사용자 지정값을 !important로 덮어씌움 */
+    body::before{ content:""; position:absolute; inset:0; background:rgba(255,255,255,.35); z-index:0 }
+    #content,#loading{ position:relative; z-index:1 }
+
+    /* loading */
+    #loading{
+      position:fixed; inset:0; display:flex; flex-direction:column; gap:10px;
+      justify-content:center; align-items:center; background:rgba(239,244,255,.9);
+      color:#000; font-size:15px; font-weight:600; z-index:1000;
+    }
+    .dot-loader{ display:flex; gap:8px; margin-bottom:6px }
+    .dot-loader span{ width:12px; height:12px; background:#5865F2; border-radius:50%;
+      animation:jump .6s infinite alternate ease-in-out }
+    .dot-loader span:nth-child(2){ animation-delay:.2s }
+    .dot-loader span:nth-child(3){ animation-delay:.4s }
+    @keyframes jump{ from{transform:translateY(0)} to{transform:translateY(-10px)} }
+
+    /* card */
+    #content{
+      display:none; width:var(--card-w); border-radius:16px; overflow:hidden; background:#fff;
+      box-shadow:0 8px 24px rgba(0,0,0,.25); animation:fadeIn 1s ease;
+    }
+    .card-top{
+      background:
+        linear-gradient(135deg, rgba(127,90,240,.2), rgba(255,128,191,.2)),
+        url("https://img.freepik.com/premium-photo/abstract-background-design-hd-olive-green-color_851755-74064.jpg?semt=ais_hybrid&w=740&q=80") center/cover no-repeat;
+      padding:60px 20px 80px; text-align:center; color:#fff; position:relative;
+    }
+    .card-top img{
+      width:110px; height:110px; border-radius:50%; border:4px solid #fff; object-fit:cover;
+      box-shadow:0 4px 12px rgba(0,0,0,.3); position:absolute; bottom:-55px; left:50%;
+      transform:translateX(-50%); background:#fff;
+    }
+    .card-bottom{ padding:70px 25px 30px; text-align:center }
+    .card-bottom h1{ margin:-5px 0 10px; font-size:24px; font-weight:800; color:#111 }
+    .tags{ display:flex; justify-content:center; gap:10px; margin-bottom:15px; flex-wrap:wrap }
+    /* 기본 box-shadow는 render()에서 인라인 스타일로 덮어씌웁니다 */
+    .tag{
+      padding:6px 14px; border-radius:20px; font-size:12px; font-weight:700; color:#fff;
+      background:#fd0000; box-shadow:0 0 10px rgba(228,194,209,1);
+      transition: box-shadow .3s ease, transform .2s ease;
+    }
+    .tag-blue{ background:#c7d2fe } .tag-yellow{ background:#fde68a }
+    .tag-pink{ background:#fd8a8a } .tag-gray{ background:#e5e7eb }
+
+    .buttons{ display:flex; flex-direction:column; gap:12px; margin-top:15px }
+    .btn{
+      display:block; padding:12px 0; text-align:center; font-size:13px; font-weight:700;
+      color:#111827; background:#f9fafb; border-radius:8px; text-decoration:none;
+      box-shadow:0 2px 6px rgba(0,0,0,.1); transition:all .25s ease; word-break:keep-all;
+    }
+    .btn:hover{ background:#e5e7eb; transform:scale(1.03) }
+
+    @keyframes fadeIn{ from{opacity:0; transform:translateY(20px)} to{opacity:1; transform:translateY(0)} }
+
+    /* floating buttons */
+    .fab{
+      position:fixed; right:16px; bottom:16px; z-index:1200; display:flex; gap:8px; align-items:center;
+    }
+    .fab .settings-toggle, .fab .auth-toggle{
+      width:48px; height:48px; border-radius:50%; border:none; cursor:pointer;
+      background:#111; color:#fff; font-size:22px; line-height:1; box-shadow:0 8px 24px rgba(0,0,0,.25);
+    }
+    .auth-toggle{ background:#4b5563; font-size:18px }
+
+    /* settings panel */
+    .settings-panel{
+      position:fixed; inset:auto 0 0 0; max-height:85vh; background:#fff; z-index:1100;
+      border-radius:16px 16px 0 0; box-shadow:0 -12px 32px rgba(0,0,0,.18);
+      transform:translateY(100%); transition:transform .35s ease;
+    }
+    .settings-panel.open{ transform:translateY(0) }
+    .sp-head{
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+      padding:14px 16px; border-bottom:1px solid #f0f2f5; position:sticky; top:0; background:#fff; z-index:1;
+    }
+    .sp-title{ font-weight:800; font-size:16px }
+    .sp-body{ padding:14px 16px 18px; overflow:auto; max-height:calc(85vh - 56px) }
+    .grid{ display:grid; grid-template-columns:1fr; gap:10px }
+    .row{ display:grid; grid-template-columns:1fr; gap:8px }
+    .row-2{ display:grid; grid-template-columns:1fr 1fr; gap:8px }
+    .row-3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px }
+    label{ font-size:12px; font-weight:700; color:#374151 }
+    input[type="text"],input[type="url"],input[type="email"],input[type="password"]{
+      width:100%; padding:10px 12px; border:1px solid #e5e7eb; border-radius:8px; font-size:14px; background:#fff;
+    }
+    select{ width:100%; padding:10px 12px; border:1px solid #e5e7eb; border-radius:8px; font-size:14px; background:#fff }
+    .list{ display:flex; flex-direction:column; gap:8px }
+    .item{ border:1px solid #eef0f3; border-radius:10px; padding:10px; display:grid; gap:8px }
+    .item-head{ display:flex; align-items:center; justify-content:space-between; gap:8px }
+    .item-actions{ display:flex; gap:6px }
+    .btn-small{
+      padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; background:#fff; cursor:pointer; font-weight:700; font-size:12px;
+    }
+    .btn-primary{ background:#111; color:#fff; border-color:#111 }
+    .btn-danger{ background:#fee2e2; border-color:#fecaca; color:#991b1b }
+    .btn-ghost{ background:#f9fafb }
+    .hr{ height:1px; background:#f0f2f5; margin:10px 0 }
+    .actions{ display:flex; gap:8px; flex-wrap:wrap }
+    .note{ font-size:12px; color:#6b7280 }
+    .color-picker{ margin-top:6px; width:100%; height:40px; padding:0; border:none; }
+
+    /* auth modal */
+    .modal{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; z-index:1300 }
+    .modal.open{ display:flex }
+    .modal-card{ width:min(480px, 92vw); background:#fff; border-radius:12px; box-shadow:0 10px 28px rgba(0,0,0,.25); padding:16px }
+    .modal-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px }
+    .modal-title{ font-weight:800 }
+    .right{ margin-left:auto }
+    .pill{ font-size:12px; padding:4px 8px; border-radius:999px; background:#eef2ff; color:#3730a3; }
+    .auth-row{ display:grid; grid-template-columns:1fr; gap:8px; margin:8px 0 }
+    .auth-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:8px }
+    .login-hint{ font-size:12px; color:#6b7280 }
+    @media (min-width: 900px){
+      .settings-panel{ left:50%; right:auto; width:560px; margin-left:-280px; border-radius:16px }
+      .sp-body{ max-height:calc(85vh - 56px) }
+    }
+  </style>
+</head>
+<body>
+  <!-- loading -->
+  <div id="loading">
+    <div class="dot-loader"><span></span><span></span><span></span></div>
+    <span id="loadingText">불러오고 있어요</span>
+  </div>
+
+  <!-- card -->
+  <div id="content" role="main" aria-label="소개 카드">
+    <div class="card-top">
+      <img id="profileImg" src="https://img.freepik.com/premium-photo/abstract-background-design-hd-olive-green-color_851755-74064.jpg?semt=ais_hybrid&w=740&q=80" alt="프로필"/>
+    </div>
+    <div class="card-bottom">
+      <h1 id="displayName">마이 네임</h1>
+      <div class="tags" id="tagsWrap"></div>
+      <div class="buttons" id="buttonsWrap"></div>
+    </div>
+  </div>
+
+  <!-- floating buttons -->
+  <div class="fab">
+    <button class="auth-toggle" id="authToggle" title="로그인/로그아웃" aria-label="로그인">👤</button>
+    <button class="settings-toggle" id="settingsToggle" title="설정 열기/닫기" aria-label="설정">⚙️</button>
+  </div>
+
+  <!-- settings panel -->
+  <aside class="settings-panel" id="settingsPanel" aria-label="설정 패널">
+    <div class="sp-head">
+      <div class="sp-title">패널 설정</div>
+      <div class="actions">
+        <span id="sessionPill" class="pill" style="display:none"></span>
+        <button class="btn-small btn-ghost" id="importBtn">가져오기</button>
+        <button class="btn-small btn-ghost" id="exportBtn">내보내기</button>
+        <button class="btn-small btn-danger" id="resetBtn">초기화</button>
+        <button class="btn-small btn-primary" id="saveBtn">저장</button>
+      </div>
+    </div>
+    <div class="sp-body">
+      <div class="grid">
+        <div class="row-2">
+          <div>
+            <label>페이지 타이틀</label>
+            <input id="titleInput" type="text" placeholder="브라우저 탭 제목(선택)"/>
+          </div>
+          <div>
+            <label>로딩 문구</label>
+            <input id="loadingMsgInput" type="text" placeholder="불러오는 동안 보일 문구"/>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>디스플레이 이름</label>
+          <input id="nameInput" type="text" placeholder="카드에 표시할 이름"/>
+        </div>
+
+        <div class="row">
+          <label>배경 사진 (파일 업로드만)</label>
+          <input id="bgInput" type="text" placeholder="파일 선택만 가능" readonly />
+          <input id="bgFile" type="file" accept="image/*" class="color-picker" />
+        </div>
+
+        <div class="row">
+          <label>배너 사진 (파일 업로드만)</label>
+          <input id="bannerInput" type="text" placeholder="파일 선택만 가능" readonly />
+          <input id="bannerFile" type="file" accept="image/*" class="color-picker" />
+        </div>
+
+        <div class="row">
+          <label>프로필 사진 (파일 업로드만)</label>
+          <input id="profileInput" type="text" placeholder="파일 선택만 가능" readonly />
+          <input id="profileFile" type="file" accept="image/*" class="color-picker" />
+        </div>
+
+        <!-- 로딩 색상 -->
+        <div class="row-2">
+          <div>
+            <label>로딩 배경 색 (CSS Color)</label>
+            <input id="loadingBgInput" type="text" placeholder="rgba(239,244,255,0.9) / #eff4ffcc"/>
+            <input id="loadingBgPicker" type="color" class="color-picker"/>
+          </div>
+          <div>
+            <label>로딩 공 색 (CSS Color)</label>
+            <input id="loadingDotInput" type="text" placeholder="#5865F2 / rgb(88,101,242)"/>
+            <input id="loadingDotPicker" type="color" class="color-picker"/>
+          </div>
+        </div>
+
+        <!-- ★ 배경 오버레이 & 카드 그림자 색 -->
+        <div class="row-2">
+          <div>
+            <label>배경 오버레이 색 (CSS Color)</label>
+            <input id="overlayColorInput" type="text" placeholder="rgba(255,255,255,0.35) / #ffffff80"/>
+            <input id="overlayColorPicker" type="color" class="color-picker"/>
+            <div class="note">투명도를 주려면 <code>rgba(r,g,b,a)</code> 형태를 권장합니다.</div>
+          </div>
+          <div>
+            <label>카드 그림자 색 (CSS Color)</label>
+            <input id="cardShadowColorInput" type="text" placeholder="rgba(0,0,0,0.25) / #00000040"/>
+            <input id="cardShadowColorPicker" type="color" class="color-picker"/>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="row">
+          <label>태그</label>
+          <div id="tagsList" class="list"></div>
+          <button class="btn-small" id="addTagBtn">+ 태그 추가</button>
+          <div class="note">색상 코드는 HEX / rgb() / rgba() 모두 가능. <b>태그 그림자 색을 비우면 배경색과 동일</b>합니다. (컬러 피커도 사용 가능)</div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="row">
+          <label>버튼</label>
+          <div id="linksList" class="list"></div>
+          <button class="btn-small" id="addLinkBtn">+ 버튼 추가</button>
+          <div class="note">버튼은 “이름 + 링크(URL)”만 입력하면 됩니다.</div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="row">
+          <label>공유</label>
+          <div class="actions">
+            <button class="btn-small" id="previewBtn">미리보기 적용</button>
+            <button class="btn-small" id="shareLinkBtn">공유 링크 만들기</button>
+            <button class="btn-small" id="saveToAccountBtn">계정에 저장(클라우드)</button>
+            <button class="btn-small" id="loadFromAccountBtn">계정에서 불러오기</button>
+          </div>
+          <div class="note">저장은 로컬 + 주소의 <code>?c=</code> 갱신 → 새로고침해도 로딩 색이 유지됩니다. 교차 기기는 “계정 저장/불러오기” 사용.</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- templates -->
+  <template id="tagTpl">
+    <div class="item tag-item">
+      <div class="item-head">
+        <strong>태그</strong>
+        <div class="item-actions"><button class="btn-small btn-danger tag-del">삭제</button></div>
+      </div>
+      <div class="row-2">
+        <div>
+          <label>텍스트</label>
+          <input type="text" class="tag-text" placeholder="예: 치린이집"/>
+        </div>
+        <div>
+          <label>색상</label>
+          <select class="tag-color">
+            <option value="tag-blue">파랑</option>
+            <option value="tag-yellow">노랑</option>
+            <option value="tag-pink">핑크</option>
+            <option value="tag-gray">회색</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <label>색상 코드 (선택) — HEX 또는 rgb/rgba</label>
+        <input type="text" class="tag-color-code" placeholder="#ff5577 또는 rgb(255,85,119)"/>
+        <input type="color" class="tag-color-picker color-picker"/>
+      </div>
+      <div class="row">
+        <label>태그 그림자 색 (선택) — 비우면 태그 색과 동일</label>
+        <input type="text" class="tag-shadow-code" placeholder="rgba(0,0,0,0.18) / #c7d2fe"/>
+        <input type="color" class="tag-shadow-picker color-picker"/>
+      </div>
+    </div>
+  </template>
+
+  <template id="linkTpl">
+    <div class="item link-item">
+      <div class="item-head">
+        <strong>버튼</strong>
+        <div class="item-actions"><button class="btn-small btn-danger link-del">삭제</button></div>
+      </div>
+      <div class="row">
+        <label>버튼 이름</label>
+        <input type="text" class="link-label" placeholder="예: 신고문의"/>
+      </div>
+      <div class="row">
+        <label>연결 링크(URL)</label>
+        <input type="url" class="link-url" placeholder="https://example.com"/>
+      </div>
+    </div>
+  </template>
+
+  <!-- auth modal -->
+  <div class="modal" id="authModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <div class="modal-head">
+        <div class="modal-title" id="authTitle">로그인 / 회원가입</div>
+        <button class="btn-small btn-ghost" id="authClose">닫기</button>
+      </div>
+      <div class="auth-row">
+        <label>이메일</label>
+        <input id="authEmail" type="email" placeholder="you@example.com" autocomplete="email"/>
+      </div>
+      <div class="auth-row">
+        <label>비밀번호</label>
+        <input id="authPw" type="password" placeholder="8자 이상" autocomplete="current-password"/>
+      </div>
+      <div class="login-hint">※ 회원가입 시 <b>이메일 인증</b>이 완료되어야 로그인/비번변경이 가능합니다.</div>
+      <div class="auth-actions">
+        <button class="btn-small" id="sendResetBtn">비밀번호 재설정 메일 보내기</button>
+        <span class="right"></span>
+        <button class="btn-small btn-primary" id="registerBtn">회원가입(인증 메일)</button>
+        <button class="btn-small btn-primary" id="loginBtn">로그인</button>
+        <button class="btn-small" id="logoutBtn" style="display:none">로그아웃</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- password reset modal (after recovery link) -->
+  <div class="modal" id="pwModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pwTitle">
+      <div class="modal-head">
+        <div class="modal-title" id="pwTitle">새 비밀번호 설정</div>
+        <button class="btn-small btn-ghost" id="pwClose">닫기</button>
+      </div>
+      <div class="auth-row">
+        <label>새 비밀번호</label>
+        <input id="newPw1" type="password" placeholder="8자 이상"/>
+      </div>
+      <div class="auth-row">
+        <label>새 비밀번호 확인</label>
+        <input id="newPw2" type="password" placeholder="다시 입력"/>
+      </div>
+      <div class="auth-actions">
+        <span class="right"></span>
+        <button class="btn-small btn-primary" id="pwUpdateBtn">비밀번호 변경</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = "https://jutgrivlikaflkhbdhar.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp1dGdyaXZsaWthZmxraGJkaGFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxNTk1MTEsImV4cCI6MjA3MTczNTUxMX0.qGsSDiqtzoUYWvWruRGMzzorDVQAO0MLEpIpgX_BpP8";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // 키 미설정 시 클라우드 관련 버튼/모달 숨김
+    const CLOUD_READY = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("<YOUR-") && !SUPABASE_ANON_KEY.includes("<YOUR-");
+    window.addEventListener("DOMContentLoaded", ()=>{
+      if(!CLOUD_READY){
+        document.getElementById("authToggle").style.display="none";
+        document.getElementById("saveToAccountBtn").style.display="none";
+        document.getElementById("loadFromAccountBtn").style.display="none";
+      }
+    });
+  </script>
+
+  <script>
+  /* ===================== 기본값/유틸 ===================== */
+  const DEFAULTS = {
+    pageTitle: "MyNameis",
+    loadingText: "불러오고 있어요",
+    backgroundUrl: "https://img.freepik.com/premium-photo/abstract-background-design-hd-olive-green-color_851755-74064.jpg?semt=ais_hybrid&w=740&q=80",
+    bannerUrl:     "https://img.freepik.com/premium-photo/abstract-background-design-hd-olive-green-color_851755-74064.jpg?semt=ais_hybrid&w=740&q=80",
+    profileUrl:    "https://img.freepik.com/premium-photo/abstract-background-design-hd-olive-green-color_851755-74064.jpg?semt=ais_hybrid&w=740&q=80",
+    name: "마이네임",
+    loadingBg: "rgba(239,244,255,0.9)",
+    loadingDot: "#5865F2",
+    overlayColor: "rgba(255,255,255,0.35)",   // ★ 기본 배경 오버레이 색
+    cardShadowColor: "rgba(0,0,0,0.25)",      // ★ 기본 카드 그림자 색
+    tags: [
+      { text:"마이네임이즈", color:"tag-blue",  shadowColor:"" },
+      { text:"소개페이지",   color:"tag-yellow",shadowColor:"" },
+      { text:"웹사이트",     color:"tag-pink",  shadowColor:"" }
+    ],
+    buttons: []
+  };
+
+  const $ = (s, el=document)=> el.querySelector(s);
+  const $$ = (s, el=document)=> [...el.querySelectorAll(s)];
+  // 버튼 링크 검사용(이미지와 무관)
+  const isSafeUrl = u => /^https?:\/\//i.test(u||"") || /^data:image\/[a-zA-Z]+;base64,/i.test(u||"");
+  // ★ 이미지 업로드 전용 허용: data:image/*;base64 만
+  const isDataImage = u => /^data:image\/[a-zA-Z]+;base64,/i.test(u||"");
+  const LS_KEY = "panelConfig.v2";
+
+  // 안전 인코딩/디코딩
+  function encodeCfg(cfg){
+    const json = JSON.stringify(cfg);
+    const bytes = new TextEncoder().encode(json);
+    let bin = ""; for (let i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+  function decodeCfg(s){
+    try{
+      const bin = atob(s);
+      const bytes = new Uint8Array([...bin].map(ch=>ch.charCodeAt(0)));
+      const json = new TextDecoder().decode(bytes);
+      return JSON.parse(json);
+    }catch(e){ return null; }
+  }
+
+  // 색상 유틸
+  const HEX_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+  const RGB_RE = /^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}(?:\s*,\s*(0|1|0?\.\d+))?\s*\)$/i;
+  function isCssColor(v){ return HEX_RE.test(v||"") || RGB_RE.test(v||""); }
+  function hexToRgb(hex){ let h=hex.slice(1); if(h.length===3){ h=h.split('').map(c=>c+c).join(''); } const n=parseInt(h,16); return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 }; }
+  function rgbStringToRgb(s){ const m=s.replace(/[rgba()\s]/g,'').split(',').map(Number); return { r:m[0], g:m[1], b:m[2], a:(m[3]!==undefined? m[3]:1) }; }
+  function getContrastTextColor(color){
+    let r,g,b; if(HEX_RE.test(color)){ ({r,g,b}=hexToRgb(color)); } else if(RGB_RE.test(color)){ ({r,g,b}=rgbStringToRgb(color)); } else { return '#111'; }
+    const toLin=v=>{ v/=255; return v<=0.03928? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); };
+    const L=0.2126*toLin(r)+0.7152*toLin(g)+0.0722*toLin(b);
+    return L>0.6 ? '#111' : '#fff';
+  }
+  const PRESET_COLORS = { "tag-blue":"#c7d2fe", "tag-yellow":"#fde68a", "tag-pink":"#fd8a8a", "tag-gray":"#e5e7eb" };
+
+  // 파일을 dataURL로
+  function fileToDataURL(file, cb){
+    const r=new FileReader(); r.onload=()=>cb(r.result); r.readAsDataURL(file);
+  }
+
+  // ★ 적용 함수: 오버레이/카드 그림자 색
+  function applyOverlayColor(color){
+    const c = isCssColor(color) ? color : DEFAULTS.overlayColor;
+    let s = document.getElementById("overlayOverride");
+    if(!s){ s=document.createElement("style"); s.id="overlayOverride"; document.head.appendChild(s); }
+    s.textContent = `body::before{background:${c} !important;}`;
+  }
+  function applyCardShadowColor(color){
+    const c = isCssColor(color) ? color : DEFAULTS.cardShadowColor;
+    let s = document.getElementById("cardShadowOverride");
+    if(!s){ s=document.createElement("style"); s.id="cardShadowOverride"; document.head.appendChild(s); }
+    s.textContent = `#content{ box-shadow:0 8px 24px ${c} !important; }`;
+  }
+
+  /* ===================== 렌더러/폼 ===================== */
+  function render(cfg){
+    document.title = cfg.pageTitle || cfg.name || document.title;
+    $("#loadingText").textContent = cfg.loadingText || DEFAULTS.loadingText;
+
+    // 로딩 배경/도트
+    const L = $("#loading");
+    if (L && cfg.loadingBg)  L.style.background = cfg.loadingBg;
+    document.querySelectorAll(".dot-loader span").forEach(s=>{ if(cfg.loadingDot) s.style.background = cfg.loadingDot; });
+
+    // 배경/배너/프로필/이름
+    document.body.style.backgroundImage = `url("${cfg.backgroundUrl}")`;
+    $(".card-top").style.backgroundImage = `
+      linear-gradient(135deg, rgba(127,90,240,.2), rgba(255,128,191,.2)),
+      url("${cfg.bannerUrl}")
+    `;
+    $("#profileImg").src = cfg.profileUrl || "";
+    $("#displayName").textContent = cfg.name || "";
+
+    // 태그
+    const tw = $("#tagsWrap"); tw.innerHTML = "";
+    (cfg.tags||[]).forEach(t=>{
+      const d = document.createElement("div");
+      d.className = "tag";
+      let bgColor = null;
+      if (isCssColor(t.color)) { bgColor = t.color; d.style.background = t.color; d.style.color = getContrastTextColor(t.color); }
+      else { const klass = t.color || "tag-gray"; d.className = `tag ${klass}`; bgColor = PRESET_COLORS[klass] || "#e5e7eb"; }
+      d.textContent = t.text||"";
+      const sColor = (t.shadowColor && isCssColor(t.shadowColor)) ? t.shadowColor : bgColor;
+      d.style.boxShadow = `0 8px 18px ${sColor}`;
+      tw.appendChild(d);
+    });
+
+    // 버튼
+    const bw = $("#buttonsWrap"); bw.innerHTML = "";
+    (cfg.buttons||[]).forEach(b=>{
+      if(!b.label || !isSafeUrl(b.url)) return;
+      const a = document.createElement("a"); a.className="btn"; a.target="_blank"; a.rel="noopener";
+      a.textContent = b.label; a.href = b.url; bw.appendChild(a);
+    });
+
+    // ★ 적용
+    applyOverlayColor(cfg.overlayColor);
+    applyCardShadowColor(cfg.cardShadowColor);
+  }
+
+  const panel = $("#settingsPanel");
+  const toggleBtn = $("#settingsToggle");
+  const authToggle = $("#authToggle");
+  const sessionPill = $("#sessionPill");
+
+  const titleInput=$("#titleInput"), loadingMsgInput=$("#loadingMsgInput"), nameInput=$("#nameInput"),
+        bgInput=$("#bgInput"), bannerInput=$("#bannerInput"), profileInput=$("#profileInput"),
+        loadingBgInput=$("#loadingBgInput"), loadingDotInput=$("#loadingDotInput"),
+        tagsList=$("#tagsList"), linksList=$("#linksList");
+
+  const bgFile=$("#bgFile"), bannerFile=$("#bannerFile"), profileFile=$("#profileFile");
+  const loadingBgPicker=$("#loadingBgPicker"), loadingDotPicker=$("#loadingDotPicker");
+
+  // ★ 새 입력
+  const overlayColorInput = $("#overlayColorInput");
+  const overlayColorPicker = $("#overlayColorPicker");
+  const cardShadowColorInput = $("#cardShadowColorInput");
+  const cardShadowColorPicker = $("#cardShadowColorPicker");
+
+  function openPanel(o=true){ panel.classList.toggle("open", o) }
+  toggleBtn.addEventListener("click", ()=>{
+    if (!currentUser) { alert("패널을 열기 전에 로그인/회원가입(이메일 인증)해주세요."); openAuth(true); return; }
+    openPanel(!panel.classList.contains("open"));
+  });
+
+  function addTagRow(tag={text:"", color:"tag-gray", shadowColor:""}){
+    const tpl = $("#tagTpl").content.cloneNode(true);
+    const row = tpl.querySelector(".tag-item");
+    row.querySelector(".tag-text").value = tag.text||"";
+    if (isCssColor(tag.color)) { row.querySelector(".tag-color-code").value = tag.color; row.querySelector(".tag-color").value = "tag-gray"; }
+    else { row.querySelector(".tag-color").value = tag.color||"tag-gray"; }
+    if (tag.shadowColor){ const sc=row.querySelector(".tag-shadow-code"); if(sc) sc.value = tag.shadowColor; }
+    // 삭제
+    row.querySelector(".tag-del").addEventListener("click", ()=> row.remove());
+    // 컬러 피커 → 텍스트 동기화
+    const colPicker = row.querySelector(".tag-color-picker");
+    const shdPicker = row.querySelector(".tag-shadow-picker");
+    const colInput  = row.querySelector(".tag-color-code");
+    const shdInput  = row.querySelector(".tag-shadow-code");
+    if (colPicker) colPicker.addEventListener("input", e=>{ colInput.value = e.target.value; render(collectForm()); });
+    if (shdPicker) shdPicker.addEventListener("input", e=>{ shdInput.value = e.target.value; render(collectForm()); });
+    tagsList.appendChild(tpl);
+  }
+  function addLinkRow(link={label:"", url:""}){
+    const tpl = $("#linkTpl").content.cloneNode(true); const row = tpl.querySelector(".link-item");
+    row.querySelector(".link-label").value = link.label||""; row.querySelector(".link-url").value = link.url||"";
+    row.querySelector(".link-del").addEventListener("click", ()=> row.remove());
+    linksList.appendChild(tpl);
+  }
+
+  function fillForm(from){
+    titleInput.value=from.pageTitle||""; loadingMsgInput.value=from.loadingText||"";
+    nameInput.value=from.name||"";
+    // ★ URL은 보여주지 않음(파일 업로드만 허용) — dataURL일 때만 표시
+    bgInput.value     = isDataImage(from.backgroundUrl) ? from.backgroundUrl : "";
+    bannerInput.value = isDataImage(from.bannerUrl)     ? from.bannerUrl     : "";
+    profileInput.value= isDataImage(from.profileUrl)    ? from.profileUrl    : "";
+    loadingBgInput.value=from.loadingBg || DEFAULTS.loadingBg;
+    loadingDotInput.value=from.loadingDot || DEFAULTS.loadingDot;
+
+    // 컬러 피커 초기화
+    if(/^#/.test(loadingBgInput.value))  loadingBgPicker.value  = loadingBgInput.value;
+    if(/^#/.test(loadingDotInput.value)) loadingDotPicker.value = loadingDotInput.value;
+
+    // ★ 새 값 채우기
+    overlayColorInput.value   = from.overlayColor   || DEFAULTS.overlayColor;
+    cardShadowColorInput.value= from.cardShadowColor|| DEFAULTS.cardShadowColor;
+    if(/^#/.test(overlayColorInput.value))   overlayColorPicker.value   = overlayColorInput.value;
+    if(/^#/.test(cardShadowColorInput.value)) cardShadowColorPicker.value= cardShadowColorInput.value;
+
+    tagsList.innerHTML=""; (from.tags||[]).forEach(addTagRow);
+    linksList.innerHTML=""; (from.buttons||[]).forEach(addLinkRow);
+  }
+  function collectForm(){
+    const tags = $$(".tag-item", tagsList).map(el=>({
+      text: $(".tag-text", el).value.trim(),
+      color: ($(".tag-color-code", el)?.value.trim()) || $(".tag-color", el).value || "tag-gray",
+      shadowColor: $(".tag-shadow-code", el)?.value.trim() || ""
+    })).filter(t=>t.text);
+    const buttons = $$(".link-item", linksList).map(el=>({
+      label: $(".link-label", el).value.trim(),
+      url: $(".link-url", el).value.trim()
+    })).filter(b=> b.label && isSafeUrl(b.url));
+
+    // ★ 이미지 세 필드는 dataURL만 반영(텍스트 URL 무시)
+    const bgVal     = isDataImage(bgInput.value.trim())     ? bgInput.value.trim()     : DEFAULTS.backgroundUrl;
+    const bannerVal = isDataImage(bannerInput.value.trim()) ? bannerInput.value.trim() : DEFAULTS.bannerUrl;
+    const profileVal= isDataImage(profileInput.value.trim())? profileInput.value.trim(): DEFAULTS.profileUrl;
+
+    return {
+      pageTitle: titleInput.value.trim() || nameInput.value.trim() || DEFAULTS.pageTitle,
+      loadingText: loadingMsgInput.value.trim() || DEFAULTS.loadingText,
+      backgroundUrl: bgVal,
+      bannerUrl: bannerVal,
+      profileUrl: profileVal,
+      name: nameInput.value.trim() || DEFAULTS.name,
+      loadingBg:  loadingBgInput.value.trim()  || DEFAULTS.loadingBg,
+      loadingDot: loadingDotInput.value.trim() || DEFAULTS.loadingDot,
+      overlayColor:   overlayColorInput.value.trim()   || DEFAULTS.overlayColor,   // ★
+      cardShadowColor:cardShadowColorInput.value.trim()|| DEFAULTS.cardShadowColor,// ★
+      tags, buttons
+    };
+  }
+
+  // 이미지 파일 선택 → dataURL로 입력값 세팅 + 즉시 미리보기
+  function bindFileInput(fileEl, targetInput, after){
+    fileEl?.addEventListener("change", e=>{
+      const f=e.target.files?.[0]; if(!f) return;
+      fileToDataURL(f, (dataURL)=>{
+        targetInput.value = dataURL;
+        if (typeof after === "function") after(dataURL);
+        render(collectForm());
+      });
+    });
+  }
+  bindFileInput(bgFile, bgInput, (dataURL)=>{});
+  bindFileInput(bannerFile, bannerInput, (dataURL)=>{});
+  bindFileInput(profileFile, profileInput, (dataURL)=>{ $("#profileImg").src = dataURL; });
+
+  // 로딩 색상 컬러피커 동기화
+  loadingBgPicker?.addEventListener("input", e=>{ loadingBgInput.value = e.target.value; render(collectForm()); });
+  loadingDotPicker?.addEventListener("input", e=>{ loadingDotInput.value = e.target.value; render(collectForm()); });
+
+  // ★ 새 컬러피커 동기화
+  overlayColorPicker?.addEventListener("input", e=>{
+    overlayColorInput.value = e.target.value; render(collectForm());
+  });
+  cardShadowColorPicker?.addEventListener("input", e=>{
+    cardShadowColorInput.value = e.target.value; render(collectForm());
+  });
+
+  $("#addTagBtn").addEventListener("click", ()=> addTagRow());
+  $("#addLinkBtn").addEventListener("click", ()=> addLinkRow());
+  $("#previewBtn").addEventListener("click", ()=> render(collectForm()));
+
+  // 저장 → 로컬 + 주소 ?c= 갱신(새로고침 유지) + 로그인 시 클라우드 업로드
+  $("#saveBtn").addEventListener("click", async ()=>{
+    const c = collectForm();
+    localStorage.setItem(LS_KEY, JSON.stringify(c));
+    render(c);
+    try{
+      const u=new URL(location.href);
+      u.searchParams.set("c", encodeCfg(c));
+      history.replaceState(null,"",u);
+    }catch{}
+    if (CLOUD_READY && currentUser) { await saveToAccountRemote(c); }
+    alert("저장되었습니다.");
+    openPanel(false);
+  });
+  $("#resetBtn").addEventListener("click", ()=>{
+    if(confirm("모든 설정을 기본값으로 되돌릴까요?")){
+      localStorage.setItem(LS_KEY, JSON.stringify(DEFAULTS));
+      fillForm(DEFAULTS); render(DEFAULTS);
+      const u=new URL(location.href); u.searchParams.set("c", encodeCfg(DEFAULTS)); history.replaceState(null,"",u);
+      alert("초기화했습니다.");
+    }
+  });
+  $("#exportBtn").addEventListener("click", ()=>{
+    const blob = new Blob([JSON.stringify(collectForm(),null,2)], {type:"application/json"});
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download="panel-config.json"; a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  $("#importBtn").addEventListener("click", ()=>{
+    const inp=document.createElement("input"); inp.type="file"; inp.accept="application/json";
+    inp.onchange=()=>{ const f=inp.files[0]; if(!f) return;
+      const r=new FileReader();
+      r.onload=()=>{ try{ const c=JSON.parse(r.result); fillForm(c); render(c); alert("가져오기 완료. 저장을 눌러 반영하세요."); }catch{ alert("잘못된 JSON 파일입니다."); } };
+      r.readAsText(f);
+    };
+    inp.click();
+  });
+  $("#shareLinkBtn").addEventListener("click", ()=>{
+    const encoded = encodeCfg(collectForm());
+    const url = new URL(location.href); url.searchParams.set("c", encoded);
+    navigator.clipboard?.writeText(url.toString());
+    prompt("공유 링크를 복사해가세요:", url.toString());
+  });
+
+  /* ===================== Supabase 저장/불러오기 ===================== */
+  async function saveToAccountRemote(cfg){
+    if(!CLOUD_READY) return alert("클라우드 기능은 키 설정 후 사용 가능합니다.");
+    const { data:{ user }, error:e1 } = await supabase.auth.getUser();
+    if (e1 || !user) return alert("로그인이 필요합니다.");
+    const { error } = await supabase.from("configs").upsert({ user_id:user.id, data:cfg });
+    if (error) return alert(error.message);
+    alert("클라우드에 저장 완료");
+  }
+  async function loadFromAccountRemote(){
+    if(!CLOUD_READY) return alert("클라우드 기능은 키 설정 후 사용 가능합니다.");
+    const { data:{ user }, error:e1 } = await supabase.auth.getUser();
+    if (e1 || !user) return alert("로그인이 필요합니다.");
+    const { data, error } = await supabase.from("configs").select("data").eq("user_id", user.id).single();
+    if (error || !data) return alert("계정에 저장된 설정이 없습니다.");
+    const cfg = data.data;
+    fillForm(cfg); render(cfg); localStorage.setItem(LS_KEY, JSON.stringify(cfg));
+    try{ const u=new URL(location.href); u.searchParams.set("c", encodeCfg(cfg)); history.replaceState(null,"",u);}catch{}
+    alert("계정에서 불러왔습니다.");
+  }
+  document.getElementById("saveToAccountBtn").addEventListener("click", ()=> saveToAccountRemote(collectForm()));
+  document.getElementById("loadFromAccountBtn").addEventListener("click", ()=> loadFromAccountRemote());
+
+  /* ===================== 인증: 이메일 인증 필수 흐름 ===================== */
+  let currentUser = null;
+  const authModal = $("#authModal"), authEmail=$("#authEmail"), authPw=$("#authPw");
+  const loginBtn=$("#loginBtn"), registerBtn=$("#registerBtn"), logoutBtn=$("#logoutBtn"), authClose=$("#authClose");
+  const sendResetBtn = $("#sendResetBtn");
+  const pwModal = $("#pwModal"), pwClose = $("#pwClose"), newPw1=$("#newPw1"), newPw2=$("#newPw2"), pwUpdateBtn=$("#pwUpdateBtn");
+
+  function openAuth(o=true){ authModal.classList.toggle("open", o); if(o){ authEmail.focus(); } }
+  function openPw(o=true){ pwModal.classList.toggle("open", o); if(o){ newPw1.focus(); } }
+
+  authClose.addEventListener("click", ()=> openAuth(false));
+  pwClose.addEventListener("click", ()=> openPw(false));
+
+  // 사람 아이콘 → 모달 열기
+  authToggle.addEventListener("click", ()=>{
+    if(currentUser){
+      $("#authTitle").textContent = "계정 정보";
+      authEmail.value = currentUser;
+      authEmail.disabled = true;
+      authPw.value = "";
+      logoutBtn.style.display = "";
+      registerBtn.style.display = "none";
+      loginBtn.textContent = "재로그인";
+      openAuth(true);
+    } else {
+      $("#authTitle").textContent = "로그인 / 회원가입";
+      authEmail.value = ""; authEmail.disabled = false; authPw.value = "";
+      logoutBtn.style.display = "none";
+      registerBtn.style.display = "";
+      loginBtn.textContent = "로그인";
+      openAuth(true);
+    }
+  });
+
+  // 회원가입(이메일 인증 필수)
+  registerBtn.addEventListener("click", async ()=>{
+    if(!CLOUD_READY) return alert("클라우드 기능은 키 설정 후 사용 가능합니다.");
+    const email = authEmail.value.trim(); const pw = authPw.value;
+    if(!email || !pw) return alert("이메일과 비밀번호를 입력하세요.");
+    const { error } = await supabase.auth.signUp({
+      email, password: pw,
+      options: { emailRedirectTo: window.location.origin + window.location.pathname }
+    });
+    if (error) return alert(error.message);
+    alert("회원가입 메일을 보냈어요. 메일함의 인증 링크를 눌러주세요.");
+    openAuth(false);
+  });
+
+  // 로그인(인증 전이면 서버가 거부)
+  loginBtn.addEventListener("click", async ()=>{
+    if(!CLOUD_READY) return alert("클라우드 기능은 키 설정 후 사용 가능합니다.");
+    const email = authEmail.value.trim(); const pw = authPw.value;
+    if(!email || !pw) return alert("이메일과 비밀번호를 입력하세요.");
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pw });
+    if (error){
+      const msg = (error.message || "").toLowerCase();
+      if (msg.includes("confirm") || msg.includes("verified") || msg.includes("not confirmed")){
+        alert("이메일 인증이 완료되어야 로그인할 수 있어요. 받은 메일의 인증 링크를 눌러주세요.");
+      } else {
+        alert(error.message);
+      }
+      return;
+    }
+    const user = data.user;
+    currentUser = user.email;
+    sessionPill.textContent = `로그인: ${user.email}`; sessionPill.style.display = "";
+    openAuth(false);
+  });
+
+  // 로그아웃
+  logoutBtn.addEventListener("click", async ()=>{
+    await supabase.auth.signOut();
+    currentUser = null;
+    sessionPill.style.display = "none";
+    openAuth(false);
+  });
+
+  // 비밀번호 재설정 메일(항상 이메일 소유자 확인 경유)
+  sendResetBtn.addEventListener("click", async ()=>{
+    if(!CLOUD_READY) return alert("클라우드 기능은 키 설정 후 사용 가능합니다.");
+    const email = (authEmail.value || "").trim();
+    if(!email) return alert("재설정 메일을 받을 이메일을 입력하세요.");
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname
+    });
+    if (error) return alert(error.message);
+    alert("비밀번호 재설정 메일을 보냈어요. 메일의 링크를 통해 새 비밀번호를 설정하세요.");
+  });
+
+  // 세션 복원 + 상태 변화 구독 (복구 링크 처리 포함)
+  supabase.auth.getSession().then(({ data })=>{
+    const user = data.session?.user;
+    if (user) {
+      currentUser = user.email;
+      sessionPill.textContent = `로그인: ${user.email}`;
+      sessionPill.style.display = "";
+    }
+  });
+  supabase.auth.onAuthStateChange((event, session)=>{
+    if (event === "PASSWORD_RECOVERY"){ openAuth(false); openPw(true); return; }
+    const user = session?.user;
+    if (user) {
+      currentUser = user.email;
+      window.currentUser = currentUser;
+      sessionPill.textContent = `로그인: ${user.email}`;
+      sessionPill.style.display = "";
+      // ★ 로그인되면 내 설정 자동으로 1회 가져오기
+      loadFromAccountRemote().catch(()=>{});
+    } else {
+      currentUser = null; window.currentUser = null; sessionPill.style.display = "none";
+    }
+  });
+
+  // 복구 링크에서 새 비밀번호 설정
+  pwUpdateBtn.addEventListener("click", async ()=>{
+    const p1 = newPw1.value, p2 = newPw2.value;
+    if(p1.length < 8) return alert("비밀번호는 8자 이상이어야 합니다.");
+    if(p1 !== p2)    return alert("비밀번호가 서로 다릅니다.");
+    const { error } = await supabase.auth.updateUser({ password: p1 });
+    if (error) return alert(error.message);
+    alert("비밀번호가 변경되었습니다. 다시 로그인해주세요.");
+    openPw(false);
+    openAuth(true);
+  });
+
+  /* ===================== 부팅/초기 적용 ===================== */
+  const initial = (()=>{
+    const url = new URL(location.href);
+    const c = url.searchParams.get("c"); if(c){ const d=decodeCfg(c); if(d) return d; }
+    try{ const raw = localStorage.getItem(LS_KEY); if(raw) return JSON.parse(raw); }catch{}
+    return structuredClone(DEFAULTS);
+  })();
+
+  window.addEventListener("load", ()=>{
+    setTimeout(()=>{ $("#loading").style.display="none"; $("#content").style.display="block"; }, 1200);
+  });
+  fillForm(initial); render(initial);
+
+  // ?edit=1 → 설정 자동 오픈
+  if(new URL(location.href).searchParams.get("edit")==="1"){ openPanel(true); }
+  </script>
+</body>
+</html>
