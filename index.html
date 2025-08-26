@@ -646,97 +646,6 @@
   document.getElementById("addLinkBtn").addEventListener("click", ()=> addLinkRow());
   document.getElementById("previewBtn").addEventListener("click", ()=> render(collectForm()));
 
-  /* 저장: 너무 길면 ?c= 생략 + 로컬 + (로그인 시) 클라우드 */
-  // ---- 저장 핸들러 (반응 보장 + 에러 표시 + 델리게이션) ----
-async function onSaveClick(e){
-  try{
-    const btn = document.getElementById("saveBtn");
-    if (btn) { btn.disabled = true; btn.textContent = "저장중…"; }
-
-    const c = collectForm();
-
-    // 로컬 저장 + 즉시 반영
-    localStorage.setItem(LS_KEY, JSON.stringify(c));
-    render(c);
-
-    // URL(?c=)은 너무 길면 생략
-    const enc = encodeCfg(c);
-    const u = new URL(location.href);
-    if (enc.length <= LENGTH_LIMIT) u.searchParams.set("c", enc); else u.searchParams.delete("c");
-    history.replaceState(null,"",u);
-
-    // 클라우드 저장(로그인 상태일 때만)
-    if (typeof CLOUD_READY !== "undefined" && CLOUD_READY && typeof currentUser !== "undefined" && currentUser) {
-      await saveToAccountRemote(c);
-      // 있으면: 내 슬러그도 자동 동기화(선택 기능, 없으면 무시)
-      if (typeof syncMyLinkIfOwner === "function") {
-        await syncMyLinkIfOwner(c);
-      }
-    }
-
-    alert("저장되었습니다.");
-    if (btn) { btn.disabled = false; btn.textContent = "저장"; }
-    if (typeof openPanel === "function") openPanel(false);
-  }catch(err){
-    console.error(err);
-    alert("저장 중 오류가 발생했습니다: " + (err?.message || err));
-    const btn = document.getElementById("saveBtn");
-    if (btn) { btn.disabled = false; btn.textContent = "저장"; }
-  }
-}
-
-// 안전 바인딩(초기 에러/타이밍에도 대응)
-function bindSaveBtnSafely(){
-  const btn = document.getElementById("saveBtn");
-  if (!btn || btn._bound) return;
-  btn._bound = true;
-  btn.addEventListener("click", onSaveClick);
-}
-
-// DOM 준비됐을 때도, 스크립트가 늦게 붙어도 둘 다 잡아준다.
-document.addEventListener("DOMContentLoaded", bindSaveBtnSafely);
-bindSaveBtnSafely();
-
-// 마지막 안전망: 클릭 위임(버튼이 나중에 생겨도 동작)
-document.addEventListener("click", (ev)=>{
-  const t = ev.target;
-  if (t && (t.id === "saveBtn" || t.closest?.("#saveBtn"))) {
-    onSaveClick(ev);
-  }
-});
-
-  document.getElementById("resetBtn").addEventListener("click", ()=>{
-    if(confirm("모든 설정을 기본값으로 되돌릴까요?")){
-      localStorage.setItem(LS_KEY, JSON.stringify(DEFAULTS));
-      fillForm(DEFAULTS); render(DEFAULTS);
-      const u=new URL(location.href); u.searchParams.delete("c"); history.replaceState(null,"",u);
-      alert("초기화했습니다.");
-    }
-  });
-  document.getElementById("exportBtn").addEventListener("click", ()=>{
-    const blob = new Blob([JSON.stringify(collectForm(),null,2)], {type:"application/json"});
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download="panel-config.json"; a.click();
-    URL.revokeObjectURL(a.href);
-  });
-  document.getElementById("importBtn").addEventListener("click", ()=>{
-    const inp=document.createElement("input"); inp.type="file"; inp.accept="application/json";
-    inp.onchange=()=>{ const f=inp.files[0]; if(!f) return;
-      const r=new FileReader();
-      r.onload=()=>{ try{ const c=JSON.parse(r.result); fillForm(c); render(c); alert("가져오기 완료. 저장을 눌러 반영하세요."); }catch{ alert("잘못된 JSON 파일입니다."); } };
-      r.readAsText(f);
-    };
-    inp.click();
-  });
-
-  document.getElementById("shareLinkBtn").addEventListener("click", ()=>{
-    const encoded = encodeCfg(collectForm());
-    if (encoded.length > LENGTH_LIMIT) { alert("링크가 너무 길어요. ‘짧은 링크/내 링크’를 사용하세요."); return; }
-    const url = new URL(location.href); url.searchParams.set("c", encoded);
-    navigator.clipboard?.writeText(url.toString());
-    prompt("공유 링크를 복사해가세요:", url.toString());
-    const clean = new URL(location.href); clean.searchParams.delete("c"); history.replaceState(null,"",clean);
-  });
-
   /* ===== Supabase 저장/불러오기 ===== */
   async function saveToAccountRemote(cfg){
     if(!CLOUD_READY) return alert("클라우드 기능은 키 설정 후 사용 가능합니다.");
@@ -783,7 +692,7 @@ document.addEventListener("click", (ev)=>{
   }
   document.getElementById("createShortBtn").addEventListener("click", ()=> createShortLink(collectForm()));
 
-  /* ===== 내 링크(슬러그) 저장/복사 ===== */
+  /* ===== 내 링크(슬러그) 저장/복사 + 소유자 자동동기화 ===== */
   const mySlugInput = document.getElementById("mySlugInput");
   document.getElementById("reserveSlugBtn").addEventListener("click", reserveMySlug);
   document.getElementById("copyMyLinkBtn").addEventListener("click", copyMyLink);
@@ -843,6 +752,34 @@ document.addEventListener("click", (ev)=>{
     const url = myLinkFrom(handle);
     navigator.clipboard?.writeText(url);
     prompt("복사해서 공유하세요:", url);
+  }
+
+  // 저장 시 내가 소유한 슬러그에도 자동 동기화 (있으면)
+  async function syncMyLinkIfOwner(cfg){
+    try{
+      const handle = (document.getElementById("mySlugInput")?.value || "").trim().toLowerCase();
+      if(!handle) return;
+      if(!CLOUD_READY) return;
+      const { data:{ user } } = await supabase.auth.getUser();
+      if(!user) return;
+
+      const { data, error } = await supabase
+        .from("short_configs")
+        .select("owner_id")
+        .eq("code", handle)
+        .maybeSingle();
+
+      if(error){ console.warn(error); return; }
+      if(!data || !data.owner_id || data.owner_id === user.id){
+        await supabase.from("short_configs").upsert({
+          code: handle,
+          owner_id: user.id,
+          data: cfg
+        });
+      }
+    }catch(e){
+      console.warn("syncMyLinkIfOwner failed:", e);
+    }
   }
 
   /* ===== 인증 & ‘첫 로그인 초기화’ ===== */
@@ -988,7 +925,7 @@ document.addEventListener("click", (ev)=>{
 
     if (slug){
       const cfg = await fetchShortByCode(slug);
-      if (cfg){ fillForm(cfg); render(cfg); }
+      if(cfg){ fillForm(cfg); render(cfg); }
       // 주소를 예쁜 경로로 정리
       const target = `${appBasePath()}u/${encodeURIComponent(slug)}`;
       if (location.pathname !== target){
@@ -998,6 +935,72 @@ document.addEventListener("click", (ev)=>{
       const u = new URL(location.href); u.searchParams.delete("c"); history.replaceState(null,"",u);
     }
   }
+
+  /* ===================== 저장 로직 보강 ===================== */
+
+  // 1) 비동기 타임아웃 보호 (클라우드 저장 지연 대비)
+  async function safeTimeout(promise, ms = 7000) {
+    try {
+      return await Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error("TIMEOUT")), ms))
+      ]);
+    } catch (e) {
+      console.warn("safeTimeout:", e?.message || e);
+      return { __error: e?.message || String(e) };
+    }
+  }
+
+  // 2) 저장 버튼 핸들러 (반응 보장 + 지연 방지)
+  async function onSaveClick() {
+    const btn = document.getElementById("saveBtn");
+    try {
+      if (btn) { btn.disabled = true; btn.textContent = "저장중…"; }
+
+      const c = collectForm();
+
+      // 로컬 저장 + 즉시 반영
+      localStorage.setItem(LS_KEY, JSON.stringify(c));
+      render(c);
+
+      // URL (?c=) 반영 — 너무 길면 제거
+      const enc = encodeCfg(c);
+      const u = new URL(location.href);
+      if (enc.length <= LENGTH_LIMIT) {
+        u.searchParams.set("c", enc);
+      } else {
+        u.searchParams.delete("c");
+      }
+      history.replaceState(null, "", u);
+
+      // 클라우드 저장(있으면) — 7초 타임아웃
+      if (CLOUD_READY && currentUser) {
+        if (typeof saveToAccountRemote === "function") {
+          await safeTimeout(saveToAccountRemote(c), 7000);
+        }
+        if (typeof syncMyLinkIfOwner === "function") {
+          await safeTimeout(syncMyLinkIfOwner(c), 7000);
+        }
+      }
+
+      alert("저장되었습니다.");
+      if (typeof openPanel === "function") openPanel(false);
+    } catch (err) {
+      console.error(err);
+      alert("저장 중 오류가 발생했습니다: " + (err?.message || err));
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = "저장"; }
+    }
+  }
+
+  // 안전 바인딩 + 위임
+  document.getElementById("saveBtn").addEventListener("click", onSaveClick);
+  document.addEventListener("click", (ev)=>{
+    const t = ev.target;
+    if (t && (t.id === "saveBtn" || t.closest?.("#saveBtn"))) {
+      onSaveClick();
+    }
+  });
 
   /* ===================== 부팅 ===================== */
   const initial = (()=>{
