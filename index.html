@@ -14,6 +14,7 @@
       background:url("https://img.freepik.com/premium-photo/abstract-background-design-hd-olive-green-color_851755-74064.jpg?semt=ais_hybrid&w=740&q=80") no-repeat center/cover fixed;
       position:relative;
     }
+    /* 기본 오버레이 */
     body::before{ content:""; position:absolute; inset:0; background:rgba(255,255,255,.35); z-index:0 }
     #content,#loading{ position:relative; z-index:1 }
 
@@ -50,72 +51,52 @@
     .card-bottom h1{ margin:-5px 0 10px; font-size:24px; font-weight:800; color:#111 }
     .tags{ display:flex; justify-content:center; gap:10px; margin-bottom:15px; flex-wrap:wrap }
     .tag{
-      padding:6px 14px; border-radius:20px; font-size:12px; font-weight:700; color:#fff;
-      background:#fd0000; box-shadow:0 0 10px rgba(228,194,209,1);
-      transition: box-shadow .3s ease, transform .2s ease;
+      padding:6px 14px; border-radius:999px; font-size:12px; font-weight:700;
+      box-shadow:0 4px 10px rgba(0,0,0,.12);
+      background:#eef2ff; color:#3730a3;
     }
-    .tag-blue{ background:#c7d2fe } .tag-yellow{ background:#fde68a }
-    .tag-pink{ background:#fd8a8a } .tag-gray{ background:#e5e7eb }
+    .links{ display:grid; gap:10px }
+    .link-btn{
+      display:block; text-decoration:none; text-align:center; padding:12px 16px; border-radius:12px;
+      background:#111; color:#fff; font-weight:800; border:1px solid #111;
+    }
 
-    .buttons{ display:flex; flex-direction:column; gap:12px; margin-top:15px }
+    /* floating actions */
+    .fab{ position:fixed; bottom:16px; right:16px; display:flex; gap:8px; flex-wrap:wrap; z-index:1200 }
     .btn{
-      display:block; padding:12px 0; text-align:center; font-size:13px; font-weight:700;
-      color:#111827; background:#f9fafb; border-radius:8px; text-decoration:none;
-      box-shadow:0 2px 6px rgba(0,0,0,.1); transition:all .25s ease; word-break:keep-all;
+      padding:10px 12px; border-radius:10px; border:1px solid #e5e7eb; background:#fff; font-weight:800; cursor:pointer;
     }
-    .btn:hover{ background:#e5e7eb; transform:scale(1.03) }
-
-    @keyframes fadeIn{ from{opacity:0; transform:translateY(20px)} to{opacity:1; transform:translateY(0)} }
-
-    /* floating buttons */
-    .fab{
-      position:fixed; right:16px; bottom:16px; z-index:1200; display:flex; gap:8px; align-items:center;
-    }
-    .fab .settings-toggle, .fab .auth-toggle{
-      width:48px; height:48px; border-radius:50%; border:none; cursor:pointer;
-      background:#111; color:#fff; font-size:22px; line-height:1; box-shadow:0 8px 24px rgba(0,0,0,.25);
-    }
-    .auth-toggle{ background:#4b5563; font-size:18px }
+    .btn-primary{ background:#111; color:#fff; border-color:#111 }
+    .btn-ghost{ background:#f9fafb }
+    .btn-danger{ background:#fee2e2; border-color:#fecaca; color:#991b1b }
 
     /* settings panel */
     .settings-panel{
-      position:fixed; inset:auto 0 0 0; max-height:85vh; background:#fff; z-index:1100;
-      border-radius:16px 16px 0 0; box-shadow:0 -12px 32px rgba(0,0,0,.18);
-      transform:translateY(100%); transition:transform .35s ease;
+      position:fixed; top:8%; left:8px; right:8px; z-index:1100; background:#fff; border:1px solid #eef0f3;
+      border-radius:12px; box-shadow:0 10px 28px rgba(0,0,0,.25); display:none; flex-direction:column; max-width:720px;
     }
-    .settings-panel.open{ transform:translateY(0) }
-    .sp-head{
-      display:flex; align-items:center; justify-content:space-between; gap:8px;
-      padding:14px 16px; border-bottom:1px solid #f0f2f5; position:sticky; top:0; background:#fff; z-index:1;
-    }
-    .sp-title{ font-weight:800; font-size:16px }
-    .sp-body{ padding:14px 16px 18px; overflow:auto; max-height:calc(85vh - 56px) }
-    .grid{ display:grid; grid-template-columns:1fr; gap:10px }
-    .row{ display:grid; grid-template-columns:1fr; gap:8px }
-    .row-2{ display:grid; grid-template-columns:1fr 1fr; gap:8px }
-    .row-3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px }
-    label{ font-size:12px; font-weight:700; color:#374151 }
-    input[type="text"],input[type="url"],input[type="email"],input[type="password"]{
+    .settings-panel.open{ display:flex }
+    .sp-head{ display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1px solid #f0f2f5 }
+    .sp-title{ font-weight:800 }
+    .sp-body{ padding:12px; max-height:calc(75vh - 56px); overflow:auto }
+    .sp-actions{ padding:10px 12px; border-top:1px solid #f0f2f5; display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end }
+    .row{ display:grid; gap:6px; margin:10px 0 }
+    .row-2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0 }
+    label{ font-size:12px; color:#6b7280; font-weight:700 }
+    input, select{
       width:100%; padding:10px 12px; border:1px solid #e5e7eb; border-radius:8px; font-size:14px; background:#fff;
     }
-    select{ width:100%; padding:10px 12px; border:1px solid #e5e7eb; border-radius:8px; font-size:14px; background:#fff }
     .list{ display:flex; flex-direction:column; gap:8px }
     .item{ border:1px solid #eef0f3; border-radius:10px; padding:10px; display:grid; gap:8px }
     .item-head{ display:flex; align-items:center; justify-content:space-between; gap:8px }
     .item-actions{ display:flex; gap:6px }
-    .btn-small{
-      padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; background:#fff; cursor:pointer; font-weight:700; font-size:12px;
-    }
-    .btn-primary{ background:#111; color:#fff; border-color:#111 }
-    .btn-danger{ background:#fee2e2; border-color:#fecaca; color:#991b1b }
-    .btn-ghost{ background:#f9fafb }
+    .btn-small{ padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; background:#fff; cursor:pointer; font-weight:700; font-size:12px; }
     .hr{ height:1px; background:#f0f2f5; margin:10px 0 }
-    .actions{ display:flex; gap:8px; flex-wrap:wrap }
     .note{ font-size:12px; color:#6b7280 }
     .color-picker{ margin-top:6px; width:100%; height:40px; padding:0; border:none; }
 
     /* auth modal */
-    .modal{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; z-index:1300 }
+    .modal{ position:fixed; inset:0; background:rgba(0,0,0,.05); display:none; align-items:center; justify-content:center; z-index:1300 }
     .modal.open{ display:flex }
     .modal-card{ width:min(480px, 92vw); background:#fff; border-radius:12px; box-shadow:0 10px 28px rgba(0,0,0,.25); padding:16px }
     .modal-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px }
@@ -125,6 +106,7 @@
     .auth-row{ display:grid; grid-template-columns:1fr; gap:8px; margin:8px 0 }
     .auth-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:8px }
     .login-hint{ font-size:12px; color:#6b7280 }
+
     @media (min-width: 900px){
       .settings-panel{ left:50%; right:auto; width:560px; margin-left:-280px; border-radius:16px }
       .sp-body{ max-height:calc(85vh - 56px) }
@@ -138,135 +120,107 @@
     <span id="loadingText">불러오고 있어요</span>
   </div>
 
-  <!-- card -->
-  <div id="content" role="main" aria-label="소개 카드">
-    <div class="card-top">
-      <img id="profileImg" src="https://img.freepik.com/premium-photo/abstract-background-design-hd-olive-green-color_851755-74064.jpg?semt=ais_hybrid&w=740&q=80" alt="프로필"/>
+  <!-- content card -->
+  <div id="content">
+    <div class="card-top" id="banner">
+      <img id="profile" alt="profile"/>
     </div>
     <div class="card-bottom">
-      <h1 id="displayName">마이 네임</h1>
-      <div class="tags" id="tagsWrap"></div>
-      <div class="buttons" id="buttonsWrap"></div>
+      <h1 id="displayName">마이네임</h1>
+      <div class="tags" id="tagBox"></div>
+      <div class="links" id="linkBox"></div>
     </div>
   </div>
 
-  <!-- floating buttons -->
+  <!-- floating actions -->
   <div class="fab">
-    <button class="auth-toggle" id="authToggle" title="로그인/로그아웃" aria-label="로그인">👤</button>
-    <button class="settings-toggle" id="settingsToggle" title="설정 열기/닫기" aria-label="설정">⚙️</button>
+    <button class="btn btn-primary" id="openPanelBtn">패널 설정</button>
+    <button class="btn" id="saveToAccountBtn">클라우드 저장</button>
+    <button class="btn" id="loadFromAccountBtn">클라우드 불러오기</button>
+    <button class="btn" id="createShortBtn">짧은 링크 만들기</button>
+    <button class="btn btn-ghost" id="authToggle">로그인/계정</button>
   </div>
 
   <!-- settings panel -->
-  <aside class="settings-panel" id="settingsPanel" aria-label="설정 패널">
+  <div class="settings-panel" id="settingsPanel" aria-hidden="true">
     <div class="sp-head">
-      <div class="sp-title">패널 설정</div>
-      <div class="actions">
-        <span id="sessionPill" class="pill" style="display:none"></span>
-        <button class="btn-small btn-ghost" id="importBtn">가져오기</button>
-        <button class="btn-small btn-ghost" id="exportBtn">내보내기</button>
-        <button class="btn-small btn-danger" id="resetBtn">초기화</button>
-        <button class="btn-small btn-primary" id="saveBtn">저장</button>
-      </div>
+      <strong class="sp-title">패널 설정</strong>
+      <span class="right note">로그인 안 했으면 클라우드 기능은 숨겨질 수 있어요</span>
+      <button class="btn-small" id="closePanelBtn">닫기</button>
     </div>
     <div class="sp-body">
-      <div class="grid">
-        <div class="row-2">
-          <div>
-            <label>페이지 타이틀</label>
-            <input id="titleInput" type="text" placeholder="브라우저 탭 제목(선택)"/>
-          </div>
-          <div>
-            <label>로딩 문구</label>
-            <input id="loadingMsgInput" type="text" placeholder="불러오는 동안 보일 문구"/>
-          </div>
+      <div class="row-2">
+        <div>
+          <label>페이지 제목</label>
+          <input id="pageTitleInput" type="text" placeholder="브라우저 탭에 표시될 제목"/>
         </div>
-
-        <div class="row">
-          <label>디스플레이 이름</label>
-          <input id="nameInput" type="text" placeholder="카드에 표시할 이름"/>
-        </div>
-
-        <div class="row">
-          <label>배경 사진 (파일 업로드만)</label>
-          <input id="bgInput" type="text" placeholder="파일 선택만 가능" readonly />
-          <input id="bgFile" type="file" accept="image/*" class="color-picker" />
-        </div>
-
-        <div class="row">
-          <label>배너 사진 (파일 업로드만)</label>
-          <input id="bannerInput" type="text" placeholder="파일 선택만 가능" readonly />
-          <input id="bannerFile" type="file" accept="image/*" class="color-picker" />
-        </div>
-
-        <div class="row">
-          <label>프로필 사진 (파일 업로드만)</label>
-          <input id="profileInput" type="text" placeholder="파일 선택만 가능" readonly />
-          <input id="profileFile" type="file" accept="image/*" class="color-picker" />
-        </div>
-
-        <!-- 로딩 색상 -->
-        <div class="row-2">
-          <div>
-            <label>로딩 배경 색 (CSS Color)</label>
-            <input id="loadingBgInput" type="text" placeholder="rgba(239,244,255,0.9) / #eff4ffcc"/>
-            <input id="loadingBgPicker" type="color" class="color-picker"/>
-          </div>
-          <div>
-            <label>로딩 공 색 (CSS Color)</label>
-            <input id="loadingDotInput" type="text" placeholder="#5865F2 / rgb(88,101,242)"/>
-            <input id="loadingDotPicker" type="color" class="color-picker"/>
-          </div>
-        </div>
-
-        <!-- 배경 오버레이 & 카드 그림자 색 -->
-        <div class="row-2">
-          <div>
-            <label>배경 오버레이 색 (CSS Color)</label>
-            <input id="overlayColorInput" type="text" placeholder="rgba(255,255,255,0.35) / #ffffff80"/>
-            <input id="overlayColorPicker" type="color" class="color-picker"/>
-            <div class="note">투명도는 <code>rgba(r,g,b,a)</code> 형태 추천.</div>
-          </div>
-          <div>
-            <label>카드 그림자 색 (CSS Color)</label>
-            <input id="cardShadowColorInput" type="text" placeholder="rgba(0,0,0,0.25) / #00000040"/>
-            <input id="cardShadowColorPicker" type="color" class="color-picker"/>
-          </div>
-        </div>
-
-        <div class="hr"></div>
-
-        <div class="row">
-          <label>태그</label>
-          <div id="tagsList" class="list"></div>
-          <button class="btn-small" id="addTagBtn">+ 태그 추가</button>
-          <div class="note">그림자 색 비우면 태그 색과 동일.</div>
-        </div>
-
-        <div class="hr"></div>
-
-        <div class="row">
-          <label>버튼</label>
-          <div id="linksList" class="list"></div>
-          <button class="btn-small" id="addLinkBtn">+ 버튼 추가</button>
-          <div class="note">버튼은 “이름 + 링크(URL)”만 입력.</div>
-        </div>
-
-        <div class="hr"></div>
-
-        <div class="row">
-          <label>공유</label>
-          <div class="actions">
-            <button class="btn-small" id="previewBtn">미리보기 적용</button>
-            <button class="btn-small" id="shareLinkBtn">공유 링크 만들기</button>
-            <button class="btn-small btn-primary" id="createShortBtn">짧은 링크 만들기</button>
-            <button class="btn-small" id="saveToAccountBtn">계정에 저장(클라우드)</button>
-            <button class="btn-small" id="loadFromAccountBtn">계정에서 불러오기</button>
-          </div>
-          <div class="note">URL이 너무 길면 자동으로 주소에 저장하지 않습니다. 공유는 “짧은 링크”를 사용하세요.</div>
+        <div>
+          <label>로딩 문구</label>
+          <input id="loadingMsgInput" type="text" placeholder="불러오는 동안 보일 문구"/>
         </div>
       </div>
+
+      <div class="row">
+        <label>디스플레이 이름</label>
+        <input id="nameInput" type="text" placeholder="카드에 표시할 이름"/>
+      </div>
+
+      <div class="row">
+        <label>배경 사진 (파일 업로드만)</label>
+        <input id="bgInput" type="text" placeholder="파일 선택만 가능" readonly />
+        <input id="bgFile" type="file" accept="image/*" class="color-picker" />
+      </div>
+
+      <div class="row">
+        <label>배너 사진 (파일 업로드만)</label>
+        <input id="bannerInput" type="text" placeholder="파일 선택만 가능" readonly />
+        <input id="bannerFile" type="file" accept="image/*" class="color-picker" />
+      </div>
+
+      <div class="row">
+        <label>프로필 사진 (파일 업로드만)</label>
+        <input id="profileInput" type="text" placeholder="파일 선택만 가능" readonly />
+        <input id="profileFile" type="file" accept="image/*" class="color-picker" />
+      </div>
+
+      <!-- 로딩 색상 -->
+      <div class="row-2">
+        <div>
+          <label>로딩 배경 색 (CSS Color)</label>
+          <input id="loadingBgInput" type="text" placeholder="rgba(239,244,255,0.9) / #eff4ffcc"/>
+          <input id="loadingBgPicker" type="color" class="color-picker"/>
+        </div>
+        <div>
+          <label>로딩 공 색 (CSS Color)</label>
+          <input id="loadingDotInput" type="text" placeholder="#5865F2 / rgb(88,101,242)"/>
+          <input id="loadingDotPicker" type="color" class="color-picker"/>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row">
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <button class="btn-small" id="addTagBtn">태그 추가</button>
+          <button class="btn-small" id="addLinkBtn">버튼 추가</button>
+          <button class="btn-small" id="previewBtn">미리보기</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="list" id="tagList"></div>
+        <div class="list" id="linkList" style="margin-top:8px"></div>
+      </div>
     </div>
-  </aside>
+
+    <div class="sp-actions">
+      <button class="btn-small btn-ghost" id="exportBtn">내보내기(JSON)</button>
+      <button class="btn-small btn-ghost" id="importBtn">가져오기(JSON)</button>
+      <span class="right"></span>
+      <button class="btn-small" id="resetBtn">기본값</button>
+      <button class="btn-small btn-primary" id="saveBtn">저장</button>
+    </div>
+  </div>
 
   <!-- templates -->
   <template id="tagTpl">
@@ -320,38 +274,39 @@
     </div>
   </template>
 
-  <!-- auth modal -->
+  <!-- Auth Modal -->
   <div class="modal" id="authModal" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <div class="modal-card">
       <div class="modal-head">
-        <div class="modal-title" id="authTitle">로그인 / 회원가입</div>
-        <button class="btn-small btn-ghost" id="authClose">닫기</button>
+        <strong class="modal-title">계정</strong>
+        <span class="pill" id="authState">로그아웃 상태</span>
+        <button class="btn-small" id="authClose">닫기</button>
       </div>
       <div class="auth-row">
         <label>이메일</label>
-        <input id="authEmail" type="email" placeholder="you@example.com" autocomplete="email"/>
+        <input id="authEmail" type="email" placeholder="you@example.com"/>
       </div>
       <div class="auth-row">
         <label>비밀번호</label>
-        <input id="authPw" type="password" placeholder="8자 이상" autocomplete="current-password"/>
+        <input id="authPw" type="password" placeholder="8자 이상"/>
       </div>
-      <div class="login-hint">※ 회원가입 시 <b>이메일 인증</b>이 완료되어야 로그인/비번변경이 가능합니다.</div>
       <div class="auth-actions">
-        <button class="btn-small" id="sendResetBtn">비밀번호 재설정 메일 보내기</button>
+        <button class="btn-small" id="sendResetBtn">비밀번호 초기화 메일</button>
         <span class="right"></span>
-        <button class="btn-small btn-primary" id="registerBtn">회원가입(인증 메일)</button>
-        <button class="btn-small btn-primary" id="loginBtn">로그인</button>
-        <button class="btn-small" id="logoutBtn" style="display:none">로그아웃</button>
+        <button class="btn-small" id="loginBtn">로그인</button>
+        <button class="btn-small btn-primary" id="registerBtn">회원가입</button>
+        <button class="btn-small btn-danger" id="logoutBtn">로그아웃</button>
       </div>
+      <p class="login-hint">최초 회원가입 후 첫 로그인 시, 서버에 기본 패널 설정이 자동 생성됩니다.</p>
     </div>
   </div>
 
-  <!-- password reset modal -->
+  <!-- Password Update Modal -->
   <div class="modal" id="pwModal" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pwTitle">
+    <div class="modal-card">
       <div class="modal-head">
-        <div class="modal-title" id="pwTitle">새 비밀번호 설정</div>
-        <button class="btn-small btn-ghost" id="pwClose">닫기</button>
+        <strong class="modal-title">비밀번호 변경</strong>
+        <button class="btn-small" id="pwClose">닫기</button>
       </div>
       <div class="auth-row">
         <label>새 비밀번호</label>
@@ -374,6 +329,8 @@
     const SUPABASE_URL = "https://jutgrivlikaflkhbdhar.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp1dGdyaXZsaWthZmxraGJkaGFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxNTk1MTEsImV4cCI6MjA3MTczNTUxMX0.qGsSDiqtzoUYWvWruRGMzzorDVQAO0MLEpIpgX_BpP8";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // 키 미설정 시 클라우드 관련 버튼/모달 숨김
     const CLOUD_READY = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("<YOUR-") && !SUPABASE_ANON_KEY.includes("<YOUR-");
     window.addEventListener("DOMContentLoaded", ()=>{
       if(!CLOUD_READY){
@@ -397,272 +354,222 @@
     loadingBg: "rgba(239,244,255,0.9)",
     loadingDot: "#5865F2",
     overlayColor: "rgba(255,255,255,0.35)",
-    cardShadowColor: "rgba(0,0,0,0.25)",
-    tags: [
-      { text:"마이네임이즈", color:"tag-blue",  shadowColor:"" },
-      { text:"소개페이지",   color:"tag-yellow",shadowColor:"" },
-      { text:"웹사이트",     color:"tag-pink",  shadowColor:"" }
-    ],
-    buttons: []
+    tags: [],
+    links: []
   };
+  const LS_KEY = "mynameis.panel.config";
 
-  const $ = (s, el=document)=> el.querySelector(s);
-  const $$ = (s, el=document)=> [...el.querySelectorAll(s)];
-  const isSafeUrl = u => /^https?:\/\//i.test(u||"") || /^data:image\/[a-zA-Z]+;base64,/i.test(u||"");
-  const isDataImage = u => /^data:image\/[a-zA-Z]+;base64,/i.test(u||"");
-  const LS_KEY = "panelConfig.v2";
+  const $ = (q, el=document)=> el.querySelector(q);
+  const $$ = (q, el=document)=> Array.from(el.querySelectorAll(q));
 
-  /* ★ URL 길이 제한: 너무 길면 ?c= 저장/공유하지 않음 */
-  const LENGTH_LIMIT = 1800;
-
-  function encodeCfg(cfg){
-    const json = JSON.stringify(cfg);
-    const bytes = new TextEncoder().encode(json);
-    let bin = ""; for (let i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
-    return btoa(bin);
-  }
-  function decodeCfg(s){
-    try{
-      const bin = atob(s);
-      const bytes = new Uint8Array([...bin].map(ch=>ch.charCodeAt(0)));
-      const json = new TextDecoder().decode(bytes);
-      return JSON.parse(json);
-    }catch(e){ return null; }
-  }
-  function cleanCParam(){
-    const u = new URL(location.href);
-    if(u.searchParams.has("c")){
-      u.searchParams.delete("c");
-      history.replaceState(null, "", u);
-    }
+  function fileToDataURL(file){
+    return new Promise((resolve,reject)=>{
+      const r=new FileReader();
+      r.onload=()=>resolve(r.result); r.onerror=reject; r.readAsDataURL(file);
+    });
   }
 
-  const HEX_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
-  const RGB_RE = /^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}(?:\s*,\s*(0|1|0?\.\d+))?\s*\)$/i;
-  function isCssColor(v){ return HEX_RE.test(v||"") || RGB_RE.test(v||""); }
-  function hexToRgb(hex){ let h=hex.slice(1); if(h.length===3){ h=h.split('').map(c=>c+c).join(''); } const n=parseInt(h,16); return { r:(n>>16)&255, g:(n>>8)&255, b:(n)&255 }; }
-  function rgbStringToRgb(s){ const m=s.replace(/[rgba()\s]/g,'').split(',').map(Number); return { r:m[0], g:m[1], b:m[2], a:(m[3]!==undefined? m[3]:1) }; }
-  function getContrastTextColor(color){
-    let r,g,b; if(HEX_RE.test(color)){ ({r,g,b}=hexToRgb(color)); } else if(RGB_RE.test(color)){ ({r,g,b}=rgbStringToRgb(color)); } else { return '#111'; }
-    const toLin=v=>{ v/=255; return v<=0.03928? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); };
-    const L=0.2126*toLin(r)+0.7152*toLin(g)+0.0722*toLin(b);
-    return L>0.6 ? '#111' : '#fff';
-  }
-  const PRESET_COLORS = { "tag-blue":"#c7d2fe", "tag-yellow":"#fde68a", "tag-pink":"#fd8a8a", "tag-gray":"#e5e7eb" };
-
-  function fileToDataURL(file, cb){ const r=new FileReader(); r.onload=()=>cb(r.result); r.readAsDataURL(file); }
-
-  function applyOverlayColor(color){
-    const c = isCssColor(color) ? color : DEFAULTS.overlayColor;
-    let s = document.getElementById("overlayOverride");
-    if(!s){ s=document.createElement("style"); s.id="overlayOverride"; document.head.appendChild(s); }
-    s.textContent = `body::before{background:${c} !important;}`;
-  }
-  function applyCardShadowColor(color){
-    const c = isCssColor(color) ? color : DEFAULTS.cardShadowColor;
-    let s = document.getElementById("cardShadowOverride");
-    if(!s){ s=document.createElement("style"); s.id="cardShadowOverride"; document.head.appendChild(s); }
-    s.textContent = `#content{ box-shadow:0 8px 24px ${c} !important; }`;
+  function makeTagNode(t){
+    const s = document.createElement('span');
+    s.className = 'tag';
+    const color = (t.colorCode && t.colorCode.trim()) || null;
+    const shadow = (t.shadowCode && t.shadowCode.trim()) || color || 'rgba(0,0,0,0.12)';
+    if(color){ s.style.background = color; s.style.color = '#111'; }
+    s.style.boxShadow = `0 4px 10px ${shadow}`;
+    s.textContent = t.text || '';
+    return s;
   }
 
   function render(cfg){
-    document.title = cfg.pageTitle || cfg.name || document.title;
-    $("#loadingText").textContent = cfg.loadingText || DEFAULTS.loadingText;
+    document.title = cfg.pageTitle || 'MyNameis';
+    $('#loadingText').textContent = cfg.loadingText || '불러오고 있어요';
+    $('#displayName').textContent = cfg.name || '마이네임';
 
-    const L = $("#loading");
-    if (L && cfg.loadingBg)  L.style.background = cfg.loadingBg;
-    document.querySelectorAll(".dot-loader span").forEach(s=>{ if(cfg.loadingDot) s.style.background = cfg.loadingDot; });
+    // 배경/배너/프로필
+    if(cfg.backgroundUrl){ document.body.style.backgroundImage = `url("${cfg.backgroundUrl}")`; }
+    if(cfg.bannerUrl){ $('#banner').style.backgroundImage =
+      `linear-gradient(135deg, rgba(127,90,240,.2), rgba(255,128,191,.2)), url("${cfg.bannerUrl}")`; }
+    if(cfg.profileUrl){ $('#profile').src = cfg.profileUrl; }
 
-    document.body.style.backgroundImage = `url("${cfg.backgroundUrl}")`;
-    $(".card-top").style.backgroundImage = `
-      linear-gradient(135deg, rgba(127,90,240,.2), rgba(255,128,191,.2)),
-      url("${cfg.bannerUrl}")
-    `;
-    $("#profileImg").src = cfg.profileUrl || "";
-    $("#displayName").textContent = cfg.name || "";
+    // 로딩 색
+    $('#loading').style.background = cfg.loadingBg || DEFAULTS.loadingBg;
+    $$('.dot-loader span').forEach(el=>{ el.style.background = cfg.loadingDot || DEFAULTS.loadingDot; });
 
-    const tw = $("#tagsWrap"); tw.innerHTML = "";
-    (cfg.tags||[]).forEach(t=>{
-      const d = document.createElement("div");
-      d.className = "tag";
-      let bgColor = null;
-      if (isCssColor(t.color)) { bgColor = t.color; d.style.background = t.color; d.style.color = getContrastTextColor(t.color); }
-      else { const klass = t.color || "tag-gray"; d.className = `tag ${klass}`; bgColor = PRESET_COLORS[klass] || "#e5e7eb"; }
-      d.textContent = t.text||"";
-      const sColor = (t.shadowColor && isCssColor(t.shadowColor)) ? t.shadowColor : bgColor;
-      d.style.boxShadow = `0 8px 18px ${sColor}`;
-      tw.appendChild(d);
+    // 태그/링크
+    const tagBox = $('#tagBox'); tagBox.innerHTML='';
+    (cfg.tags||[]).forEach(t=> tagBox.appendChild(makeTagNode(t)));
+    const linkBox = $('#linkBox'); linkBox.innerHTML='';
+    (cfg.links||[]).forEach(l=>{
+      const a = document.createElement('a');
+      a.className='link-btn'; a.href=l.url||'#'; a.target='_blank'; a.textContent=l.label||'버튼';
+      linkBox.appendChild(a);
     });
 
-    const bw = $("#buttonsWrap"); bw.innerHTML = "";
-    (cfg.buttons||[]).forEach(b=>{
-      if(!b.label || !isSafeUrl(b.url)) return;
-      const a = document.createElement("a"); a.className="btn"; a.target="_blank"; a.rel="noopener";
-      a.textContent = b.label; a.href = b.url; bw.appendChild(a);
-    });
-
-    applyOverlayColor(cfg.overlayColor);
-    applyCardShadowColor(cfg.cardShadowColor);
+    // 화면 표시
+    $('#content').style.display='block';
+    $('#loading').style.display='none';
   }
 
-  const panel = $("#settingsPanel");
-  const toggleBtn = $("#settingsToggle");
-  const authToggle = $("#authToggle");
-  const sessionPill = $("#sessionPill");
+  function fillForm(cfg){
+    $('#pageTitleInput').value = cfg.pageTitle||'';
+    $('#loadingMsgInput').value = cfg.loadingText||'';
+    $('#nameInput').value = cfg.name||'';
+    $('#loadingBgInput').value = cfg.loadingBg||'';
+    $('#loadingDotInput').value = cfg.loadingDot||'';
+    // 파일 인풋 텍스트는 미리보기용
+    $('#bgInput').value = cfg.backgroundUrl ? '(선택됨)' : '';
+    $('#bannerInput').value = cfg.bannerUrl ? '(선택됨)' : '';
+    $('#profileInput').value = cfg.profileUrl ? '(선택됨)' : '';
 
-  const titleInput=$("#titleInput"), loadingMsgInput=$("#loadingMsgInput"), nameInput=$("#nameInput"),
-        bgInput=$("#bgInput"), bannerInput=$("#bannerInput"), profileInput=$("#profileInput"),
-        loadingBgInput=$("#loadingBgInput"), loadingDotInput=$("#loadingDotInput"),
-        tagsList=$("#tagsList"), linksList=$("#linksList");
-
-  const bgFile=$("#bgFile"), bannerFile=$("#bannerFile"), profileFile=$("#profileFile");
-  const loadingBgPicker=$("#loadingBgPicker"), loadingDotPicker=$("#loadingDotPicker");
-
-  const overlayColorInput = $("#overlayColorInput");
-  const overlayColorPicker = $("#overlayColorPicker");
-  const cardShadowColorInput = $("#cardShadowColorInput");
-  const cardShadowColorPicker = $("#cardShadowColorPicker");
-
-  function openPanel(o=true){ panel.classList.toggle("open", o) }
-  toggleBtn.addEventListener("click", ()=>{
-    if (!currentUser) { alert("패널을 열기 전에 로그인/회원가입(이메일 인증)해주세요."); openAuth(true); return; }
-    openPanel(!panel.classList.contains("open"));
-  });
-
-  function addTagRow(tag={text:"", color:"tag-gray", shadowColor:""}){
-    const tpl = $("#tagTpl").content.cloneNode(true);
-    const row = tpl.querySelector(".tag-item");
-    row.querySelector(".tag-text").value = tag.text||"";
-    if (isCssColor(tag.color)) { row.querySelector(".tag-color-code").value = tag.color; row.querySelector(".tag-color").value = "tag-gray"; }
-    else { row.querySelector(".tag-color").value = tag.color||"tag-gray"; }
-    if (tag.shadowColor){ const sc=row.querySelector(".tag-shadow-code"); if(sc) sc.value = tag.shadowColor; }
-    row.querySelector(".tag-del").addEventListener("click", ()=> row.remove());
-    const colPicker = row.querySelector(".tag-color-picker");
-    const shdPicker = row.querySelector(".tag-shadow-picker");
-    const colInput  = row.querySelector(".tag-color-code");
-    const shdInput  = row.querySelector(".tag-shadow-code");
-    if (colPicker) colPicker.addEventListener("input", e=>{ colInput.value = e.target.value; render(collectForm()); });
-    if (shdPicker) shdPicker.addEventListener("input", e=>{ shdInput.value = e.target.value; render(collectForm()); });
-    tagsList.appendChild(tpl);
-  }
-  function addLinkRow(link={label:"", url:""}){
-    const tpl = $("#linkTpl").content.cloneNode(true); const row = tpl.querySelector(".link-item");
-    row.querySelector(".link-label").value = link.label||""; row.querySelector(".link-url").value = link.url||"";
-    row.querySelector(".link-del").addEventListener("click", ()=> row.remove());
-    linksList.appendChild(tpl);
+    const tagList = $('#tagList'); tagList.innerHTML='';
+    (cfg.tags||[]).forEach(t=> addTagRow(t));
+    const linkList = $('#linkList'); linkList.innerHTML='';
+    (cfg.links||[]).forEach(l=> addLinkRow(l));
   }
 
-  function fillForm(from){
-    titleInput.value=from.pageTitle||""; loadingMsgInput.value=from.loadingText||"";
-    nameInput.value=from.name||"";
-    bgInput.value     = isDataImage(from.backgroundUrl) ? from.backgroundUrl : "";
-    bannerInput.value = isDataImage(from.bannerUrl)     ? from.bannerUrl     : "";
-    profileInput.value= isDataImage(from.profileUrl)    ? from.profileUrl    : "";
-    loadingBgInput.value=from.loadingBg || DEFAULTS.loadingBg;
-    loadingDotInput.value=from.loadingDot || DEFAULTS.loadingDot;
-
-    if(/^#/.test(loadingBgInput.value))  loadingBgPicker.value  = loadingBgInput.value;
-    if(/^#/.test(loadingDotInput.value)) loadingDotPicker.value = loadingDotInput.value;
-
-    overlayColorInput.value   = from.overlayColor   || DEFAULTS.overlayColor;
-    cardShadowColorInput.value= from.cardShadowColor|| DEFAULTS.cardShadowColor;
-    if(/^#/.test(overlayColorInput.value))   overlayColorPicker.value   = overlayColorInput.value;
-    if(/^#/.test(cardShadowColorInput.value)) cardShadowColorPicker.value= cardShadowColorInput.value;
-
-    tagsList.innerHTML=""; (from.tags||[]).forEach(addTagRow);
-    linksList.innerHTML=""; (from.buttons||[]).forEach(addLinkRow);
-  }
   function collectForm(){
-    const tags = $$(".tag-item", tagsList).map(el=>({
-      text: $(".tag-text", el).value.trim(),
-      color: ($(".tag-color-code", el)?.value.trim()) || $(".tag-color", el).value || "tag-gray",
-      shadowColor: $(".tag-shadow-code", el)?.value.trim() || ""
-    })).filter(t=>t.text);
-    const buttons = $$(".link-item", linksList).map(el=>({
-      label: $(".link-label", el).value.trim(),
-      url: $(".link-url", el).value.trim()
-    })).filter(b=> b.label && isSafeUrl(b.url));
-
-    const bgVal     = isDataImage(bgInput.value.trim())     ? bgInput.value.trim()     : DEFAULTS.backgroundUrl;
-    const bannerVal = isDataImage(bannerInput.value.trim()) ? bannerInput.value.trim() : DEFAULTS.bannerUrl;
-    const profileVal= isDataImage(profileInput.value.trim())? profileInput.value.trim(): DEFAULTS.profileUrl;
-
-    return {
-      pageTitle: titleInput.value.trim() || nameInput.value.trim() || DEFAULTS.pageTitle,
-      loadingText: loadingMsgInput.value.trim() || DEFAULTS.loadingText,
-      backgroundUrl: bgVal,
-      bannerUrl: bannerVal,
-      profileUrl: profileVal,
-      name: nameInput.value.trim() || DEFAULTS.name,
-      loadingBg:  loadingBgInput.value.trim()  || DEFAULTS.loadingBg,
-      loadingDot: loadingDotInput.value.trim() || DEFAULTS.loadingDot,
-      overlayColor:   overlayColorInput.value.trim()   || DEFAULTS.overlayColor,
-      cardShadowColor:cardShadowColorInput.value.trim()|| DEFAULTS.cardShadowColor,
-      tags, buttons
+    const cfg = {
+      pageTitle: $('#pageTitleInput').value.trim() || DEFAULTS.pageTitle,
+      loadingText: $('#loadingMsgInput').value.trim() || DEFAULTS.loadingText,
+      name: $('#nameInput').value.trim() || DEFAULTS.name,
+      loadingBg: $('#loadingBgInput').value.trim() || DEFAULTS.loadingBg,
+      loadingDot: $('#loadingDotInput').value.trim() || DEFAULTS.loadingDot,
+      overlayColor: DEFAULTS.overlayColor, // (UI 항목은 그대로)
+      backgroundUrl: window.__bgDataURL || DEFAULTS.backgroundUrl,
+      bannerUrl: window.__bannerDataURL || DEFAULTS.bannerUrl,
+      profileUrl: window.__profileDataURL || DEFAULTS.profileUrl,
+      tags: [],
+      links: []
     };
+    $$('.tag-item').forEach(item=>{
+      const text = $('.tag-text', item).value.trim();
+      const colorCode = $('.tag-color-code', item).value.trim();
+      const shadowCode = $('.tag-shadow-code', item).value.trim();
+      if(text){
+        cfg.tags.push({ text, colorCode, shadowCode });
+      }
+    });
+    $$('.link-item').forEach(item=>{
+      const label = $('.link-label', item).value.trim();
+      const url = $('.link-url', item).value.trim();
+      if(label && url){ cfg.links.push({ label, url }); }
+    });
+    return cfg;
   }
 
-  function bindFileInput(fileEl, targetInput, after){
-    fileEl?.addEventListener("change", e=>{
-      const f=e.target.files?.[0]; if(!f) return;
-      fileToDataURL(f, (dataURL)=>{
-        targetInput.value = dataURL;
-        if (typeof after === "function") after(dataURL);
-        render(collectForm());
-      });
+  function addTagRow(data={}){
+    const tpl = $('#tagTpl').content.cloneNode(true);
+    const root = tpl.querySelector('.tag-item');
+    $('.tag-text',root).value = data.text||'';
+    $('.tag-color-code',root).value = data.colorCode||'';
+    $('.tag-shadow-code',root).value = data.shadowCode||'';
+    $('.tag-color-picker',root).addEventListener('input', e=>{
+      $('.tag-color-code',root).value = e.target.value;
+    });
+    $('.tag-shadow-picker',root).addEventListener('input', e=>{
+      $('.tag-shadow-code',root).value = e.target.value;
+    });
+    $('.tag-del',root).addEventListener('click', ()=> root.remove());
+    $('#tagList').appendChild(tpl);
+  }
+
+  function addLinkRow(data={}){
+    const tpl = $('#linkTpl').content.cloneNode(true);
+    const root = tpl.querySelector('.link-item');
+    $('.link-label',root).value = data.label||'';
+    $('.link-url',root).value = data.url||'';
+    $('.link-del',root).addEventListener('click', ()=> root.remove());
+    $('#linkList').appendChild(tpl);
+  }
+
+  // data-url 파일 업로드 (URL 입력 없이 파일만)
+  async function bindFilePicker(inputEl, fileEl, holder){
+    fileEl.addEventListener('change', async ()=>{
+      const f = fileEl.files && fileEl.files[0];
+      if(!f) return;
+      const url = await fileToDataURL(f);
+      window[holder] = url;
+      inputEl.value = '(선택됨)';
+      render(collectForm());
     });
   }
-  bindFileInput(bgFile, bgInput, ()=>{});
-  bindFileInput(bannerFile, bannerInput, ()=>{});
-  bindFileInput(profileFile, profileInput, (dataURL)=>{ $("#profileImg").src = dataURL; });
 
-  loadingBgPicker?.addEventListener("input", e=>{ loadingBgInput.value = e.target.value; render(collectForm()); });
-  loadingDotPicker?.addEventListener("input", e=>{ loadingDotInput.value = e.target.value; render(collectForm()); });
+  // 단축 인코딩/디코딩
+  function encodeCfg(c){ return btoa(unescape(encodeURIComponent(JSON.stringify(c)))); }
+  function decodeCfg(s){ try{ return JSON.parse(decodeURIComponent(escape(atob(s)))); }catch{ return null; } }
 
-  overlayColorPicker?.addEventListener("input", e=>{
-    overlayColorInput.value = e.target.value; render(collectForm());
+  /* ===================== 초기 로드 ===================== */
+  window.addEventListener('DOMContentLoaded', ()=>{
+    bindFilePicker($('#bgInput'), $('#bgFile'), '__bgDataURL');
+    bindFilePicker($('#bannerInput'), $('#bannerFile'), '__bannerDataURL');
+    bindFilePicker($('#profileInput'), $('#profileFile'), '__profileDataURL');
+
+    const loadingBgPicker = $('#loadingBgPicker');
+    const loadingDotPicker = $('#loadingDotPicker');
+    loadingBgPicker?.addEventListener('input', e=>{ $('#loadingBgInput').value = e.target.value; render(collectForm()); });
+    loadingDotPicker?.addEventListener('input', e=>{ $('#loadingDotInput').value = e.target.value; render(collectForm()); });
+
+    (async ()=>{
+      const u = new URL(location.href);
+      const code = u.searchParams.get('s');
+      const cstr = u.searchParams.get('c');
+      let cfg = null;
+
+      if(code && CLOUD_READY){
+        cfg = await fetchShortByCode(code);
+      }else if(cstr){
+        cfg = decodeCfg(cstr);
+      }else{
+        try{ cfg = JSON.parse(localStorage.getItem(LS_KEY)||'null'); }catch{}
+      }
+      if(!cfg) cfg = DEFAULTS;
+
+      fillForm(cfg);
+      render(cfg);
+    })();
   });
-  cardShadowColorPicker?.addEventListener("input", e=>{
-    cardShadowColorInput.value = e.target.value; render(collectForm());
-  });
 
-  document.getElementById("addTagBtn").addEventListener("click", ()=> addTagRow());
-  document.getElementById("addLinkBtn").addEventListener("click", ()=> addLinkRow());
-  document.getElementById("previewBtn").addEventListener("click", ()=> render(collectForm()));
+  /* ===================== 패널 열기/저장 등 이벤트 ===================== */
+  const panel = $('#settingsPanel');
+  function openPanel(o=true){ panel.classList.toggle('open', o); panel.setAttribute('aria-hidden', o?'false':'true'); }
+  $('#openPanelBtn').addEventListener('click', ()=> openPanel(true));
+  $('#closePanelBtn').addEventListener('click', ()=> openPanel(false));
 
-  /* 저장: URL이 길면 ?c= 넣지 않음 + 로컬 저장 + (로그인 시) 클라우드 */
-  document.getElementById("saveBtn").addEventListener("click", async ()=>{
+  $('#addTagBtn').addEventListener('click', ()=> addTagRow());
+  $('#addLinkBtn').addEventListener('click', ()=> addLinkRow());
+  $('#previewBtn').addEventListener('click', ()=> render(collectForm()));
+
+  // 저장 → 로컬 + 주소 ?c= 갱신 + 로그인 시 클라우드 업로드
+  $('#saveBtn').addEventListener('click', async ()=>{
     const c = collectForm();
     localStorage.setItem(LS_KEY, JSON.stringify(c));
     render(c);
-    const enc = encodeCfg(c);
-    const u = new URL(location.href);
-    if (enc.length <= LENGTH_LIMIT) {
-      u.searchParams.set("c", enc);
-    } else {
-      u.searchParams.delete("c");
-      alert("설정이 커서 주소에 저장하지 않았어요. 이 기기에만 저장됩니다. 공유는 ‘짧은 링크’를 이용하세요.");
-    }
-    history.replaceState(null,"",u);
+    try{
+      const u=new URL(location.href);
+      u.searchParams.set("c", encodeCfg(c));
+      history.replaceState(null,"",u);
+    }catch{}
     if (CLOUD_READY && currentUser) { await saveToAccountRemote(c); }
     alert("저장되었습니다.");
     openPanel(false);
   });
 
-  document.getElementById("resetBtn").addEventListener("click", ()=>{
+  $('#resetBtn').addEventListener('click', ()=>{
     if(confirm("모든 설정을 기본값으로 되돌릴까요?")){
       localStorage.setItem(LS_KEY, JSON.stringify(DEFAULTS));
       fillForm(DEFAULTS); render(DEFAULTS);
-      const u=new URL(location.href); u.searchParams.delete("c"); history.replaceState(null,"",u);
+      const u=new URL(location.href); u.searchParams.set("c", encodeCfg(DEFAULTS)); history.replaceState(null,"",u);
       alert("초기화했습니다.");
     }
   });
-  document.getElementById("exportBtn").addEventListener("click", ()=>{
+
+  $('#exportBtn').addEventListener('click', ()=>{
     const blob = new Blob([JSON.stringify(collectForm(),null,2)], {type:"application/json"});
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download="panel-config.json"; a.click();
     URL.revokeObjectURL(a.href);
   });
-  document.getElementById("importBtn").addEventListener("click", ()=>{
+
+  $('#importBtn').addEventListener('click', ()=>{
     const inp=document.createElement("input"); inp.type="file"; inp.accept="application/json";
     inp.onchange=()=>{ const f=inp.files[0]; if(!f) return;
       const r=new FileReader();
@@ -672,21 +579,14 @@
     inp.click();
   });
 
-  /* 공유: 길면 차단하고 짧은 링크 유도 */
-  document.getElementById("shareLinkBtn").addEventListener("click", ()=>{
+  $('#shareLinkBtn')?.addEventListener('click', ()=>{
     const encoded = encodeCfg(collectForm());
-    if (encoded.length > LENGTH_LIMIT) {
-      alert("링크가 너무 길어요. ‘짧은 링크 만들기’를 사용하세요.");
-      return;
-    }
     const url = new URL(location.href); url.searchParams.set("c", encoded);
     navigator.clipboard?.writeText(url.toString());
     prompt("공유 링크를 복사해가세요:", url.toString());
-    // 보기 편하게 즉시 ?c 제거
-    const clean = new URL(location.href); clean.searchParams.delete("c"); history.replaceState(null,"",clean);
   });
 
-  /* ===== Supabase 저장/불러오기 ===== */
+  /* ===================== Supabase 저장/불러오기 ===================== */
   async function saveToAccountRemote(cfg){
     if(!CLOUD_READY) return alert("클라우드 기능은 키 설정 후 사용 가능합니다.");
     const { data:{ user }, error:e1 } = await supabase.auth.getUser();
@@ -699,11 +599,10 @@
     if(!CLOUD_READY) return alert("클라우드 기능은 키 설정 후 사용 가능합니다.");
     const { data:{ user }, error:e1 } = await supabase.auth.getUser();
     if (e1 || !user) return alert("로그인이 필요합니다.");
-    const { data, error } = await supabase.from("configs").select("data").eq("user_id", user.id).single();
+    const { data, error } = await supabase.from("configs").select("data").eq("user_id", user.id).maybeSingle();
     if (error || !data) return alert("계정에 저장된 설정이 없습니다.");
     const cfg = data.data;
     fillForm(cfg); render(cfg); localStorage.setItem(LS_KEY, JSON.stringify(cfg));
-    // 주소에는 넣지 않음(길이 문제 예방)
     const u=new URL(location.href); u.searchParams.delete("c"); history.replaceState(null,"",u);
     alert("계정에서 불러왔습니다.");
   }
@@ -739,7 +638,7 @@
       .from("short_configs")
       .select("data")
       .eq("code", code)
-      .single();
+      .maybeSingle();
     if(error){ console.warn(error.message); return null; }
     return data?.data || null;
   }
@@ -751,139 +650,104 @@
   const loginBtn=$("#loginBtn"), registerBtn=$("#registerBtn"), logoutBtn=$("#logoutBtn"), authClose=$("#authClose");
   const sendResetBtn = $("#sendResetBtn");
   const pwModal = $("#pwModal"), pwClose = $("#pwClose"), newPw1=$("#newPw1"), newPw2=$("#newPw2"), pwUpdateBtn=$("#pwUpdateBtn");
+  const authStateSpan = $("#authState");
 
   function openAuth(o=true){ authModal.classList.toggle("open", o); if(o){ authEmail.focus(); } }
   function openPw(o=true){ pwModal.classList.toggle("open", o); if(o){ newPw1.focus(); } }
 
   authClose.addEventListener("click", ()=> openAuth(false));
   pwClose.addEventListener("click", ()=> openPw(false));
+  document.getElementById("authToggle").addEventListener("click", ()=> openAuth(true));
 
-  authToggle.addEventListener("click", ()=>{
-    if(currentUser){
-      $("#authTitle").textContent = "계정 정보";
-      authEmail.value = currentUser; authEmail.disabled = true; authPw.value = "";
-      logoutBtn.style.display = ""; registerBtn.style.display = "none";
-      loginBtn.textContent = "재로그인"; openAuth(true);
-    } else {
-      $("#authTitle").textContent = "로그인 / 회원가입";
-      authEmail.value = ""; authEmail.disabled = false; authPw.value = "";
-      logoutBtn.style.display = "none"; registerBtn.style.display = "";
-      loginBtn.textContent = "로그인"; openAuth(true);
-    }
+  function updateAuthUI(){
+    authStateSpan.textContent = currentUser ? `로그인: ${currentUser.email||currentUser.phone||'사용자'}` : "로그아웃 상태";
+  }
+
+  loginBtn.addEventListener("click", async ()=>{
+    const email = authEmail.value.trim();
+    const password = authPw.value.trim();
+    if(!email || !password) return alert("이메일/비밀번호를 입력하세요.");
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if(error) return alert(error.message);
+    alert("로그인 되었습니다.");
+    openAuth(false);
   });
 
   registerBtn.addEventListener("click", async ()=>{
-    if(!CLOUD_READY) return alert("클라우드 기능은 키 설정 후 사용 가능합니다.");
-    const email = authEmail.value.trim(); const pw = authPw.value;
-    if(!email || !pw) return alert("이메일과 비밀번호를 입력하세요.");
-    const { error } = await supabase.auth.signUp({
-      email, password: pw,
-      options: { emailRedirectTo: window.location.origin + window.location.pathname }
-    });
-    if (error) return alert(error.message);
-    alert("회원가입 메일을 보냈어요. 메일함의 인증 링크를 눌러주세요.");
-    openAuth(false);
-  });
-
-  loginBtn.addEventListener("click", async ()=>{
-    if(!CLOUD_READY) return alert("클라우드 기능은 키 설정 후 사용 가능합니다.");
-    const email = authEmail.value.trim(); const pw = authPw.value;
-    if(!email || !pw) return alert("이메일과 비밀번호를 입력하세요.");
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pw });
-    if (error){
-      const msg = (error.message || "").toLowerCase();
-      if (msg.includes("confirm") || msg.includes("verified") || msg.includes("not confirmed")){
-        alert("이메일 인증이 완료되어야 로그인할 수 있어요. 받은 메일의 인증 링크를 눌러주세요.");
-      } else {
-        alert(error.message);
-      }
-      return;
-    }
-    const user = data.user;
-    currentUser = user.email;
-    sessionPill.textContent = `로그인: ${user.email}`; sessionPill.style.display = "";
-    openAuth(false);
+    const email = authEmail.value.trim();
+    const password = authPw.value.trim();
+    if(!email || !password) return alert("이메일/비밀번호를 입력하세요.");
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if(error) return alert(error.message);
+    alert("가입이 요청되었습니다. 이메일 인증을 완료한 뒤 로그인하세요.");
   });
 
   logoutBtn.addEventListener("click", async ()=>{
     await supabase.auth.signOut();
-    currentUser = null;
-    sessionPill.style.display = "none";
-    openAuth(false);
+    alert("로그아웃 되었습니다.");
   });
 
   sendResetBtn.addEventListener("click", async ()=>{
-    if(!CLOUD_READY) return alert("클라우드 기능은 키 설정 후 사용 가능합니다.");
-    const email = (authEmail.value || "").trim();
-    if(!email) return alert("재설정 메일을 받을 이메일을 입력하세요.");
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + window.location.pathname
-    });
-    if (error) return alert(error.message);
-    alert("비밀번호 재설정 메일을 보냈어요.");
+    const email = authEmail.value.trim();
+    if(!email) return alert("메일 주소를 입력하세요.");
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: location.href });
+    if(error) return alert(error.message);
+    alert("비밀번호 재설정 메일을 보냈습니다.");
   });
 
-  supabase.auth.getSession().then(({ data })=>{
-    const user = data.session?.user;
-    if (user) {
-      currentUser = user.email;
-      sessionPill.textContent = `로그인: ${user.email}`;
-      sessionPill.style.display = "";
-    }
-  });
-  supabase.auth.onAuthStateChange((event, session)=>{
-    if (event === "PASSWORD_RECOVERY"){ openAuth(false); openPw(true); return; }
-    const user = session?.user;
-    if (user) {
-      currentUser = user.email;
-      window.currentUser = currentUser;
-      sessionPill.textContent = `로그인: ${user.email}`;
-      sessionPill.style.display = "";
-      loadFromAccountRemote().catch(()=>{});
-    } else {
-      currentUser = null; window.currentUser = null; sessionPill.style.display = "none";
-    }
-  });
-
-  document.getElementById("pwUpdateBtn").addEventListener("click", async ()=>{
-    const p1 = document.getElementById("newPw1").value, p2 = document.getElementById("newPw2").value;
-    if(p1.length < 8) return alert("비밀번호는 8자 이상이어야 합니다.");
-    if(p1 !== p2)    return alert("비밀번호가 서로 다릅니다.");
+  pwUpdateBtn.addEventListener("click", async ()=>{
+    const p1 = newPw1.value.trim(), p2 = newPw2.value.trim();
+    if(!p1 || p1.length<8) return alert("8자 이상 입력해주세요.");
+    if(p1!==p2) return alert("비밀번호가 일치하지 않습니다.");
     const { error } = await supabase.auth.updateUser({ password: p1 });
-    if (error) return alert(error.message);
-    alert("비밀번호가 변경되었습니다. 다시 로그인해주세요.");
-    document.getElementById("pwModal").classList.remove("open");
-    document.getElementById("authModal").classList.add("open");
+    if(error) return alert(error.message);
+    alert("비밀번호가 변경되었습니다.");
+    openPw(false);
   });
 
-  /* ===================== 부팅 ===================== */
-  const initial = (()=>{
-    const url = new URL(location.href);
-    // ★ ?c= 로 들어오면 읽고 즉시 주소에서 제거
-    const c = url.searchParams.get("c");
-    if(c){
-      const d=decodeCfg(c);
-      setTimeout(cleanCParam, 0);
-      if(d) return d;
+  /* ★★★ 회원가입 후 '첫 로그인'에 기본값 초기화 — 추가 부분 ★★★ */
+  async function ensureFirstSignupInit(user){
+    try{
+      // 현재 계정에 configs가 이미 있는지 확인
+      const { data:rows, error } = await supabase
+        .from('configs')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .limit(1);
+
+      if(error){ console.warn('configs 조회 실패:', error.message); return; }
+
+      const hasRow = Array.isArray(rows) && rows.length > 0;
+      if(!hasRow){
+        // 없으면 DEFAULTS로 생성
+        const { error:insErr } = await supabase
+          .from('configs')
+          .insert({ user_id: user.id, data: DEFAULTS });
+        if(insErr){ console.warn('기본 설정 생성 실패:', insErr.message); return; }
+
+        // 로컬에도 바로 기본값 반영(초기화 의도)
+        localStorage.setItem(LS_KEY, JSON.stringify(DEFAULTS));
+        fillForm(DEFAULTS);
+        render(DEFAULTS);
+        console.info('[init] 최초 가입 사용자 기본 설정 생성 완료');
+      }
+    }catch(e){
+      console.warn('ensureFirstSignupInit 오류:', e);
     }
-    try{ const raw = localStorage.getItem(LS_KEY); if(raw) return JSON.parse(raw); }catch{}
-    return structuredClone(DEFAULTS);
-  })();
+  }
 
-  window.addEventListener("load", ()=>{
-    setTimeout(()=>{ $("#loading").style.display="none"; $("#content").style.display="block"; }, 1200);
+  // 인증 상태 변화 감지: 로그인 직후 한 번 ensureFirstSignupInit → 그 다음 불러오기
+  supabase.auth.onAuthStateChange(async (event, session)=>{
+    currentUser = session?.user || null;
+    updateAuthUI();
+
+    if(currentUser && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')){
+      await ensureFirstSignupInit(currentUser);   // ★ 추가 호출
+      // 기본값이 생성됐다면 이후 계정 값 로드(최초엔 DEFAULTS가 로드됨)
+      await loadFromAccountRemote().catch(()=>{});
+    }
   });
-  fillForm(initial); render(initial);
 
-  if(new URL(location.href).searchParams.get("edit")==="1"){ openPanel(true); }
-
-  // ★ ?s=코드 → Supabase에서 가져오기 (짧은 링크)
-  (async ()=>{
-    const code = new URL(location.href).searchParams.get("s");
-    if(!code) return;
-    const cfg = await fetchShortByCode(code);
-    if(cfg){ fillForm(cfg); render(cfg); }
-  })();
   </script>
 </body>
 </html>
