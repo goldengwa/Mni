@@ -14,6 +14,7 @@
       background:url("https://img.freepik.com/premium-photo/abstract-background-design-hd-olive-green-color_851755-74064.jpg?semt=ais_hybrid&w=740&q=80") no-repeat center/cover fixed;
       position:relative;
     }
+    /* 기본 오버레이(사용자 지정값으로 JS가 덮어씀) */
     body::before{ content:""; position:absolute; inset:0; background:rgba(255,255,255,.35); z-index:0 }
     #content,#loading{ position:relative; z-index:1 }
 
@@ -33,7 +34,7 @@
     /* card */
     #content{
       display:none; width:var(--card-w); border-radius:16px; overflow:hidden; background:#fff;
-      box-shadow:0 8px 24px rgba(0,0,0,.25); animation:fadeIn 1s ease;
+      box-shadow:0 8px 24px var(--card-shadow, rgba(0,0,0,.25)); animation:fadeIn 1s ease;
     }
     .card-top{
       background:
@@ -253,6 +254,17 @@
 
         <div class="hr"></div>
 
+        <!-- 내 링크(슬러그) -->
+        <div class="row">
+          <label>내 링크(슬러그)</label>
+          <div class="actions">
+            <input id="mySlugInput" type="text" placeholder="예: oyunha (영문/숫자/-/_, 3~32자)"/>
+            <button class="btn-small" id="reserveSlugBtn">내 링크 저장/업데이트</button>
+            <button class="btn-small" id="copyMyLinkBtn">내 링크 복사</button>
+          </div>
+          <div class="note">예시: <code>/u/oyunha</code> 또는 <code>/@oyunha</code> 로 접속 가능</div>
+        </div>
+
         <div class="row">
           <label>공유</label>
           <div class="actions">
@@ -262,7 +274,7 @@
             <button class="btn-small" id="saveToAccountBtn">계정에 저장(클라우드)</button>
             <button class="btn-small" id="loadFromAccountBtn">계정에서 불러오기</button>
           </div>
-          <div class="note">URL이 너무 길면 자동으로 주소에 저장하지 않습니다. 공유는 “짧은 링크”를 사용하세요.</div>
+          <div class="note">URL이 너무 길면 자동으로 주소에 저장하지 않습니다. 공유는 “짧은 링크/내 링크(슬러그)”를 사용하세요.</div>
         </div>
       </div>
     </div>
@@ -381,6 +393,9 @@
         document.getElementById("saveToAccountBtn").style.display="none";
         document.getElementById("loadFromAccountBtn").style.display="none";
         document.getElementById("createShortBtn").style.display="none";
+        document.getElementById("reserveSlugBtn").style.display="none";
+        document.getElementById("copyMyLinkBtn").style.display="none";
+        document.getElementById("mySlugInput").disabled = true;
       }
     });
   </script>
@@ -411,9 +426,7 @@
   const isSafeUrl = u => /^https?:\/\//i.test(u||"") || /^data:image\/[a-zA-Z]+;base64,/i.test(u||"");
   const isDataImage = u => /^data:image\/[a-zA-Z]+;base64,/i.test(u||"");
   const LS_KEY = "panelConfig.v2";
-
-  /* ★ URL 길이 제한: 너무 길면 ?c= 저장/공유하지 않음 */
-  const LENGTH_LIMIT = 1800;
+  const LENGTH_LIMIT = 1800; // 너무 긴 ?c= 방지
 
   function encodeCfg(cfg){
     const json = JSON.stringify(cfg);
@@ -452,6 +465,7 @@
 
   function fileToDataURL(file, cb){ const r=new FileReader(); r.onload=()=>cb(r.result); r.readAsDataURL(file); }
 
+  /* 오버레이/카드 그림자 적용 */
   function applyOverlayColor(color){
     const c = isCssColor(color) ? color : DEFAULTS.overlayColor;
     let s = document.getElementById("overlayOverride");
@@ -465,6 +479,7 @@
     s.textContent = `#content{ box-shadow:0 8px 24px ${c} !important; }`;
   }
 
+  /* 렌더러 */
   function render(cfg){
     document.title = cfg.pageTitle || cfg.name || document.title;
     $("#loadingText").textContent = cfg.loadingText || DEFAULTS.loadingText;
@@ -505,6 +520,7 @@
     applyCardShadowColor(cfg.cardShadowColor);
   }
 
+  /* ===== 폼 바인딩 ===== */
   const panel = $("#settingsPanel");
   const toggleBtn = $("#settingsToggle");
   const authToggle = $("#authToggle");
@@ -630,19 +646,14 @@
   document.getElementById("addLinkBtn").addEventListener("click", ()=> addLinkRow());
   document.getElementById("previewBtn").addEventListener("click", ()=> render(collectForm()));
 
-  /* 저장: URL이 길면 ?c= 넣지 않음 + 로컬 저장 + (로그인 시) 클라우드 */
+  /* 저장: 너무 길면 ?c= 생략 + 로컬 + (로그인 시) 클라우드 */
   document.getElementById("saveBtn").addEventListener("click", async ()=>{
     const c = collectForm();
     localStorage.setItem(LS_KEY, JSON.stringify(c));
     render(c);
     const enc = encodeCfg(c);
     const u = new URL(location.href);
-    if (enc.length <= LENGTH_LIMIT) {
-      u.searchParams.set("c", enc);
-    } else {
-      u.searchParams.delete("c");
-      alert("설정이 커서 주소에 저장하지 않았어요. 이 기기에만 저장됩니다. 공유는 ‘짧은 링크’를 이용하세요.");
-    }
+    if (enc.length <= LENGTH_LIMIT) u.searchParams.set("c", enc); else u.searchParams.delete("c");
     history.replaceState(null,"",u);
     if (CLOUD_READY && currentUser) { await saveToAccountRemote(c); }
     alert("저장되었습니다.");
@@ -672,17 +683,12 @@
     inp.click();
   });
 
-  /* 공유: 길면 차단하고 짧은 링크 유도 */
   document.getElementById("shareLinkBtn").addEventListener("click", ()=>{
     const encoded = encodeCfg(collectForm());
-    if (encoded.length > LENGTH_LIMIT) {
-      alert("링크가 너무 길어요. ‘짧은 링크 만들기’를 사용하세요.");
-      return;
-    }
+    if (encoded.length > LENGTH_LIMIT) { alert("링크가 너무 길어요. ‘짧은 링크/내 링크’를 사용하세요."); return; }
     const url = new URL(location.href); url.searchParams.set("c", encoded);
     navigator.clipboard?.writeText(url.toString());
     prompt("공유 링크를 복사해가세요:", url.toString());
-    // 보기 편하게 즉시 ?c 제거
     const clean = new URL(location.href); clean.searchParams.delete("c"); history.replaceState(null,"",clean);
   });
 
@@ -693,59 +699,108 @@
     if (e1 || !user) return alert("로그인이 필요합니다.");
     const { error } = await supabase.from("configs").upsert({ user_id:user.id, data:cfg });
     if (error) return alert(error.message);
-    alert("클라우드에 저장 완료");
   }
   async function loadFromAccountRemote(){
     if(!CLOUD_READY) return alert("클라우드 기능은 키 설정 후 사용 가능합니다.");
     const { data:{ user }, error:e1 } = await supabase.auth.getUser();
     if (e1 || !user) return alert("로그인이 필요합니다.");
-    const { data, error } = await supabase.from("configs").select("data").eq("user_id", user.id).single();
-    if (error || !data) return alert("계정에 저장된 설정이 없습니다.");
+    const { data, error } = await supabase.from("configs").select("data").eq("user_id", user.id).maybeSingle();
+    if (error) { alert("불러오기 실패: "+error.message); return; }
+    if (!data) { alert("계정에 저장된 설정이 없습니다."); return; }
     const cfg = data.data;
     fillForm(cfg); render(cfg); localStorage.setItem(LS_KEY, JSON.stringify(cfg));
-    // 주소에는 넣지 않음(길이 문제 예방)
     const u=new URL(location.href); u.searchParams.delete("c"); history.replaceState(null,"",u);
     alert("계정에서 불러왔습니다.");
   }
   document.getElementById("saveToAccountBtn").addEventListener("click", ()=> saveToAccountRemote(collectForm()));
   document.getElementById("loadFromAccountBtn").addEventListener("click", ()=> loadFromAccountRemote());
 
-  /* ===== Supabase ‘짧은 링크’ ===== */
-  function genCode(n=8){ const chars="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"; let s=""; for(let i=0;i<n;i++) s+=chars[Math.floor(Math.random()*chars.length)]; return s; }
+  /* ===== ‘짧은 링크’ (short_configs) ===== */
+  function genCode(n=8){ const cs="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"; let s=""; for(let i=0;i<n;i++) s+=cs[Math.floor(Math.random()*cs.length)]; return s; }
   async function createShortLink(cfg){
     if(!CLOUD_READY) return alert("클라우드 키 설정 후 사용 가능합니다.");
     const { data:{ user } } = await supabase.auth.getUser();
     if(!user){ alert("짧은 링크를 만들려면 먼저 로그인해주세요."); openAuth(true); return; }
-
     let ask = prompt("짧은 코드(영문/숫자/언더바/하이픈, 4~32자). 비우면 자동 생성됩니다.","");
     ask = (ask||"").trim();
     if(ask && !/^[a-zA-Z0-9_-]{4,32}$/.test(ask)){ alert("형식이 올바르지 않아요."); return; }
     const code = ask || genCode(8);
-
-    const { data, error } = await supabase
-      .from("short_configs")
-      .upsert({ code, owner_id: user.id, data: cfg })
-      .select("code")
-      .single();
-
+    const { data, error } = await supabase.from("short_configs").upsert({ code, owner_id: user.id, data: cfg }).select("code").single();
     if(error){ alert("저장 실패: "+error.message); return; }
-
-    const shortUrl = `${location.origin}${location.pathname}?s=${encodeURIComponent(data.code)}`;
+    const shortUrl = `${location.origin}${appBasePath()}u/${encodeURIComponent(data.code)}`;
     await navigator.clipboard?.writeText(shortUrl);
     prompt("짧은 링크가 만들어졌어요. 복사해서 사용하세요:", shortUrl);
   }
   async function fetchShortByCode(code){
-    const { data, error } = await supabase
-      .from("short_configs")
-      .select("data")
-      .eq("code", code)
-      .single();
+    const { data, error } = await supabase.from("short_configs").select("data").eq("code", code).maybeSingle();
     if(error){ console.warn(error.message); return null; }
     return data?.data || null;
   }
   document.getElementById("createShortBtn").addEventListener("click", ()=> createShortLink(collectForm()));
 
-  /* ===== 인증(요약) ===== */
+  /* ===== 내 링크(슬러그) 저장/복사 ===== */
+  const mySlugInput = document.getElementById("mySlugInput");
+  document.getElementById("reserveSlugBtn").addEventListener("click", reserveMySlug);
+  document.getElementById("copyMyLinkBtn").addEventListener("click", copyMyLink);
+
+  function appBasePath(){
+    // 리포지터리 루트 경로 추정: /repo/ 또는 /
+    let p = location.pathname;
+    // /u/slug 같은 가짜 경로로 진입했을 수 있으므로 /u/ 이전까지만 루트로 본다
+    p = p.replace(/\/u\/.*$/, "/").replace(/\/@[^/]*$/, "/");
+    // index.html로 직접 열렸을 때
+    if (p.endsWith("index.html")) p = p.slice(0, p.lastIndexOf("/") + 1);
+    // 마지막이 파일명이면 디렉토리만 남김
+    if (!p.endsWith("/")) p = p.slice(0, p.lastIndexOf("/") + 1);
+    return p || "/";
+  }
+  function myLinkFrom(handle){
+    return `${location.origin}${appBasePath()}u/${encodeURIComponent(handle)}`;
+  }
+
+  async function reserveMySlug(){
+    if(!CLOUD_READY) return alert("클라우드 키 설정 후 사용 가능합니다.");
+    const { data:{ user } } = await supabase.auth.getUser();
+    if(!user){ alert("먼저 로그인해주세요."); openAuth(true); return; }
+
+    let handle = (mySlugInput.value || "").trim();
+    if(!handle){
+      handle = prompt("내 링크로 사용할 슬러그(영문/숫자/-/_, 3~32자)", "") || "";
+    }
+    handle = handle.trim().toLowerCase();
+    if(!/^[a-z0-9][a-z0-9_-]{2,31}$/.test(handle)){ alert("형식이 올바르지 않아요."); return; }
+
+    // 소유권 확인
+    let exists = null;
+    try{
+      const r = await supabase.from("short_configs").select("owner_id").eq("code", handle).maybeSingle();
+      exists = r.data || null;
+      if(r.error){ console.warn(r.error); }
+    }catch(_){}
+
+    if(exists && exists.owner_id && exists.owner_id !== user.id){
+      alert("이미 다른 사용자가 사용 중인 슬러그입니다.");
+      return;
+    }
+
+    // 현재 설정 저장 (업데이트 겸용)
+    const cfg = collectForm();
+    const { error } = await supabase.from("short_configs").upsert({ code: handle, owner_id: user.id, data: cfg });
+    if(error){ alert("저장 실패: "+error.message); return; }
+
+    mySlugInput.value = handle;
+    alert("내 링크가 저장(업데이트)되었습니다.");
+  }
+
+  function copyMyLink(){
+    const handle = (mySlugInput.value || "").trim();
+    if(!handle){ alert("먼저 위에서 ‘내 링크’ 슬러그를 저장하세요."); return; }
+    const url = myLinkFrom(handle);
+    navigator.clipboard?.writeText(url);
+    prompt("복사해서 공유하세요:", url);
+  }
+
+  /* ===== 인증 & ‘첫 로그인 초기화’ ===== */
   let currentUser = null;
   const authModal = $("#authModal"), authEmail=$("#authEmail"), authPw=$("#authPw");
   const loginBtn=$("#loginBtn"), registerBtn=$("#registerBtn"), logoutBtn=$("#logoutBtn"), authClose=$("#authClose");
@@ -794,9 +849,7 @@
       const msg = (error.message || "").toLowerCase();
       if (msg.includes("confirm") || msg.includes("verified") || msg.includes("not confirmed")){
         alert("이메일 인증이 완료되어야 로그인할 수 있어요. 받은 메일의 인증 링크를 눌러주세요.");
-      } else {
-        alert(error.message);
-      }
+      } else { alert(error.message); }
       return;
     }
     const user = data.user;
@@ -823,6 +876,17 @@
     alert("비밀번호 재설정 메일을 보냈어요.");
   });
 
+  async function ensureFirstLoginInit(userId){
+    // 계정에 저장된 설정이 없다면 DEFAULTS로 초기화
+    const r = await supabase.from("configs").select("user_id").eq("user_id", userId).maybeSingle();
+    if (r.error){ console.warn(r.error); return; }
+    if (!r.data){
+      await supabase.from("configs").insert({ user_id:userId, data: DEFAULTS }).catch(()=>{});
+      localStorage.setItem(LS_KEY, JSON.stringify(DEFAULTS));
+      fillForm(DEFAULTS); render(DEFAULTS);
+    }
+  }
+
   supabase.auth.getSession().then(({ data })=>{
     const user = data.session?.user;
     if (user) {
@@ -831,41 +895,70 @@
       sessionPill.style.display = "";
     }
   });
-  supabase.auth.onAuthStateChange((event, session)=>{
+  supabase.auth.onAuthStateChange(async (event, session)=>{
     if (event === "PASSWORD_RECOVERY"){ openAuth(false); openPw(true); return; }
     const user = session?.user;
     if (user) {
-      currentUser = user.email;
-      window.currentUser = currentUser;
-      sessionPill.textContent = `로그인: ${user.email}`;
-      sessionPill.style.display = "";
-      loadFromAccountRemote().catch(()=>{});
+      currentUser = user.email; window.currentUser = currentUser;
+      sessionPill.textContent = `로그인: ${user.email}`; sessionPill.style.display = "";
+      // ✅ 첫 로그인 시 기본값으로 초기화(1회) 후, 내 계정 설정 불러오기
+      await ensureFirstLoginInit(user.id);
+      await loadFromAccountRemote().catch(()=>{});
     } else {
       currentUser = null; window.currentUser = null; sessionPill.style.display = "none";
     }
   });
 
-  document.getElementById("pwUpdateBtn").addEventListener("click", async ()=>{
-    const p1 = document.getElementById("newPw1").value, p2 = document.getElementById("newPw2").value;
-    if(p1.length < 8) return alert("비밀번호는 8자 이상이어야 합니다.");
-    if(p1 !== p2)    return alert("비밀번호가 서로 다릅니다.");
-    const { error } = await supabase.auth.updateUser({ password: p1 });
-    if (error) return alert(error.message);
-    alert("비밀번호가 변경되었습니다. 다시 로그인해주세요.");
-    document.getElementById("pwModal").classList.remove("open");
-    document.getElementById("authModal").classList.add("open");
-  });
+  /* ===================== 라우팅 (진짜 경로 + 404 우회) ===================== */
+  function parseHashSlug(){
+    const h = location.hash || "";
+    let m = h.match(/^#@([^/?#]+)/); if(m) return decodeURIComponent(m[1]);
+    m = h.match(/^#u\/([^/?#]+)/);   if(m) return decodeURIComponent(m[1]);
+    m = h.match(/^#s=([^&]+)/);      if(m) return decodeURIComponent(m[1]);
+    return null;
+  }
+  function pathToSlug(pathname){
+    // 앱 루트 기준 나머지 경로
+    const base = appBasePath();
+    const rest = pathname.startsWith(base) ? pathname.slice(base.length) : pathname.replace(/^\/+/,'');
+    let m = rest.match(/^u\/([^\/?#]+)/); if(m) return m[1];
+    m = rest.match(/^@([^\/?#]+)/); if(m) return m[1];
+    return null;
+  }
+  function parse404CarriedPath(){ // 404.html이 넘겨준 원래 경로
+    const m = (location.hash||"").match(/^#path=(.+)$/);
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+  async function bootRoute(){
+    const url = new URL(location.href);
+    let prettyWanted = null;
+    // 1) 404에서 전달된 원래 경로 우선
+    const carried = parse404CarriedPath();
+    let slug = carried ? pathToSlug(carried) : null;
+    if (slug){ prettyWanted = carried; }
+    // 2) 현재 실제 경로가 /u/slug 또는 /@slug 인지
+    if (!slug){ slug = pathToSlug(location.pathname); if (slug) prettyWanted = location.pathname; }
+    // 3) 해시/쿼리 백업
+    if (!slug){ slug = parseHashSlug() || url.searchParams.get("s"); }
+
+    if (slug){
+      const cfg = await fetchShortByCode(slug);
+      if (cfg){ fillForm(cfg); render(cfg); }
+      // 주소를 예쁜 경로로 정리
+      const target = `${appBasePath()}u/${encodeURIComponent(slug)}`;
+      if (location.pathname !== target){
+        history.replaceState(null, "", target);
+      }
+      // 해시/쿼리 정리
+      const u = new URL(location.href); u.searchParams.delete("c"); history.replaceState(null,"",u);
+    }
+  }
 
   /* ===================== 부팅 ===================== */
   const initial = (()=>{
     const url = new URL(location.href);
-    // ★ ?c= 로 들어오면 읽고 즉시 주소에서 제거
     const c = url.searchParams.get("c");
-    if(c){
-      const d=decodeCfg(c);
-      setTimeout(cleanCParam, 0);
-      if(d) return d;
-    }
+    if(c){ const d=decodeCfg(c); setTimeout(cleanCParam, 0); if(d) return d; }
     try{ const raw = localStorage.getItem(LS_KEY); if(raw) return JSON.parse(raw); }catch{}
     return structuredClone(DEFAULTS);
   })();
@@ -877,13 +970,8 @@
 
   if(new URL(location.href).searchParams.get("edit")==="1"){ openPanel(true); }
 
-  // ★ ?s=코드 → Supabase에서 가져오기 (짧은 링크)
-  (async ()=>{
-    const code = new URL(location.href).searchParams.get("s");
-    if(!code) return;
-    const cfg = await fetchShortByCode(code);
-    if(cfg){ fillForm(cfg); render(cfg); }
-  })();
+  // 라우팅 처리(짧은 링크/슬러그)
+  bootRoute();
   </script>
 </body>
 </html>
