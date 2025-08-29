@@ -426,6 +426,12 @@
   const LS_KEY = "panelConfig.v2";
   const LENGTH_LIMIT = 1800;
 
+  function hideLoading(){
+  const loading = document.getElementById('loading');
+  const content = document.getElementById('content');
+  if (loading) loading.style.display = 'none';
+  if (content) content.style.display = 'block';
+  }
   function encodeCfg(cfg){
     const json = JSON.stringify(cfg);
     const bytes = new TextEncoder().encode(json);
@@ -479,6 +485,7 @@
   function render(cfg){
     document.title = cfg.pageTitle || cfg.name || document.title;
     $("#loadingText").textContent = cfg.loadingText || DEFAULTS.loadingText;
+    hideLoading();
 
     const L = $("#loading");
     if (L && cfg.loadingBg)  L.style.background = cfg.loadingBg;
@@ -909,37 +916,69 @@
   }
 
   // 1) 경로 슬러그 > 2) ?s=코드 > 3) ?c=설정 > 4) 로컬 > 5) 기본값
-  (async ()=>{
+    (async ()=>{
+  try {
     let cfg = null;
-    const pathSlug = getPathSlug();
+    const pathSlug = (function getPathSlug(){
+      const p = location.pathname;
+      if (p === "/" || /index\.html?$/.test(p)) return null;
+      const m = p.match(/^\/(?:@)?([A-Za-z0-9_-]{3,32})\/?$/);
+      return m ? m[1] : null;
+    })();
+
     const url = new URL(location.href);
     const s = url.searchParams.get("s");
     const c = url.searchParams.get("c");
 
-    if (pathSlug && CLOUD_READY){
-      cfg = await fetchShortByCode(pathSlug);
-    } 
-    if (!cfg && s && CLOUD_READY){
-      cfg = await fetchShortByCode(s);
+    // 1) /@slug → Supabase
+    if (pathSlug && typeof fetchShortByCode === "function") {
+      try { cfg = await fetchShortByCode(pathSlug); } catch {}
     }
-    if (!cfg && c){
+    // 2) ?s=code → Supabase
+    if (!cfg && s && typeof fetchShortByCode === "function") {
+      try { cfg = await fetchShortByCode(s); } catch {}
+    }
+    // 3) ?c= 설정 디코드
+    if (!cfg && c && typeof decodeCfg === "function") {
       cfg = decodeCfg(c);
-      setTimeout(cleanCParam, 0);
+      // 너무 길면 주소에서는 빼줌
+      try {
+        const u = new URL(location.href);
+        u.searchParams.delete("c");
+        history.replaceState(null, "", u);
+      } catch {}
     }
-    if (!cfg){
-      try{ const raw = localStorage.getItem(LS_KEY); if(raw) cfg = JSON.parse(raw); }catch{}
+    // 4) localStorage
+    if (!cfg) {
+      try {
+        const raw = localStorage.getItem(LS_KEY);
+        if (raw) cfg = JSON.parse(raw);
+      } catch {}
     }
-    if(!cfg) cfg = structuredClone(DEFAULTS);
+    // 5) 기본값
+    if (!cfg) cfg = structuredClone ? structuredClone(DEFAULTS) : JSON.parse(JSON.stringify(DEFAULTS));
 
-    fillForm(cfg); render(cfg);
-
-    // 로딩 끝
-    window.addEventListener("load", ()=>{
-      setTimeout(()=>{ $("#loading").style.display="none"; $("#content").style.display="block"; }, 800);
-    });
-  })();
+    fillForm(cfg);
+    render(cfg);   // ← 여기서 2번에서 넣은 hideLoading()이 호출됨
+  } catch (e) {
+    console.error("boot error:", e);
+    // 문제가 나도 기본값으로라도 보여주기
+    fillForm(DEFAULTS);
+    render(DEFAULTS);
+  } finally {
+    // 혹시 위에서 로딩을 못 닫았어도 마지막에 강제 닫기
+    if (typeof hideLoading === "function") hideLoading();
+  }
+})();
 
   if(new URL(location.href).searchParams.get("edit")==="1"){ openPanel(true); }
+ 
+  // 3초 넘어가면 무조건 닫기 (느린 이미지/네트워크 대비)
+  setTimeout(hideLoading, 3000);
+
+  // 전역 에러/미처리 Promise 거부가 있어도 닫기
+  window.addEventListener('error', hideLoading);
+  window.addEventListener('unhandledrejection', hideLoading);
   </script>
 </body>
 </html>
