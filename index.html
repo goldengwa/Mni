@@ -914,7 +914,8 @@
     if (user) { currentUser=user.email; sessionPill.textContent=`로그인: ${user.email}`; sessionPill.style.display=""; }
     else { currentUser=null; sessionPill.style.display="none"; }
   });
-
+    
+  <script>
   /* ===== 부팅 (Render용: pathname 슬러그 + 타임아웃 폴백) ===== */
   (async ()=>{
     const url = new URL(location.href);
