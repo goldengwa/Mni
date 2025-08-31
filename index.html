@@ -553,20 +553,40 @@
   }
 
   /* ===== 강력 로딩 컨트롤러 ===== */
-  (function(){
-    const L = document.getElementById("loading");
-    const C = document.getElementById("content");
-    let closed = false;
-    window.__closeLoading = function(){
-      if (closed) return;
-      try{ if(L) L.style.display="none"; if(C) C.style.display="block"; }catch(e){}
-      closed = true;
-    };
-    const HARD_MAX = 3500; // 3.5초 내 무조건 닫기
-    setTimeout(window.__closeLoading, HARD_MAX);
-    window.addEventListener("error", window.__closeLoading);
-    window.addEventListener("unhandledrejection", window.__closeLoading);
-  })();
+  <script>
+/* ===== 강력 로딩 컨트롤러 (최소표시+타임아웃, error 미사용) ===== */
+(function(){
+  const L = document.getElementById("loading");
+  const C = document.getElementById("content");
+  let closed = false;
+
+  // 최소 표시 시간(밀리초) + 최장 강제 종료 시간
+  const MIN_SHOW = 800;   // 최소 0.8초는 로딩을 보여줌
+  const HARD_MAX = 3500;  // 3.5초 내엔 무조건 닫음
+  const shownAt  = Date.now();
+
+  function reallyClose(){
+    if (closed) return;
+    try { if (L) L.style.display = "none"; if (C) C.style.display = "block"; } catch(e){}
+    closed = true;
+  }
+
+  window.__closeLoading = function(){
+    const elapsed = Date.now() - shownAt;
+    if (elapsed < MIN_SHOW) {
+      setTimeout(reallyClose, MIN_SHOW - elapsed); // 최소 표시 보장
+    } else {
+      reallyClose();
+    }
+  };
+
+  // 네트워크가 느려도 HARD_MAX 안에는 닫히도록
+  setTimeout(window.__closeLoading, HARD_MAX);
+
+  // script 내부 비동기 에러만 감지 (일반 리소스 error는 무시)
+  window.addEventListener("unhandledrejection", () => setTimeout(window.__closeLoading, 0));
+})();
+</script>
 
   /* ====== DOM 바인딩 ====== */
   const panel=$("#settingsPanel"), toggleBtn=$("#settingsToggle"), authToggle=$("#authToggle"), sessionPill=$("#sessionPill");
