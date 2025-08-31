@@ -898,17 +898,64 @@
     else { currentUser=null; sessionPill.style.display="none"; }
   });
 
-  /* ===== 부팅 ===== */
-  const initial = (()=>{
-    const url = new URL(location.href);
+<script>
+// …위쪽 기존 스크립트 유지…
+
+/* ===== 부팅 (Render용: pathname 슬러그 지원) ===== */
+(async ()=>{
+  const url = new URL(location.href);
+  let slug = url.searchParams.get("s");
+
+  // ?s가 없으면 경로에서 슬러그 추출 (/yunha, /@yunha 모두 허용)
+  if(!slug){
+    const segs = location.pathname.split('/').filter(Boolean);
+    const last = segs[segs.length-1] || "";
+    const m = last.match(/^@?([A-Za-z0-9_-]{3,32})$/);
+    if(m) slug = m[1];
+  }
+
+  let cfg = null;
+
+  // 1) 슬러그가 있으면 Supabase에서 먼저 시도 (공개 조회 정책 필요)
+  if (slug && typeof fetchShortByCode === "function") {
+    try { cfg = await fetchShortByCode(slug); } catch(e){ console.warn(e); }
+  }
+
+  // 2) ?c 파라미터 (있으면 1회용으로 우선)
+  if (!cfg) {
     const c = url.searchParams.get("c");
-    if(c){ const d=decodeCfg(c); setTimeout(cleanCParam,0); if(d) return d; }
-    try{ const raw = localStorage.getItem(LS_KEY); if(raw) return JSON.parse(raw); }catch{}
-    return structuredClone(DEFAULTS);
-  })();
-  window.addEventListener("load", ()=>{ setTimeout(()=>{ $("#loading").style.display="none"; $("#content").style.display="block"; }, 1200); });
-  fillForm(initial); render(initial);
-  (async ()=>{ const code=new URL(location.href).searchParams.get("s"); if(!code) return; const cfg=await fetchShortByCode(code); if(cfg){ fillForm(cfg); render(cfg); } })();
-  </script>
+    if (c) {
+      cfg = decodeCfg(c);
+      // 주소 청소
+      setTimeout(()=>{
+        const clean = new URL(location.href);
+        clean.searchParams.delete("c");
+        history.replaceState(null,"",clean);
+      }, 0);
+    }
+  }
+
+  // 3) localStorage
+  if (!cfg) {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) cfg = JSON.parse(raw);
+    } catch {}
+  }
+
+  // 4) 기본값
+  if (!cfg) cfg = structuredClone(DEFAULTS);
+
+  // 폼/화면 반영
+  fillForm(cfg);
+  render(cfg);
+
+  // 로딩 닫기 (너가 쓰는 closeLoading 로직이 없다면 간단히 표시 전환)
+  const L = document.getElementById("loading");
+  const C = document.getElementById("content");
+  if (L) L.style.display = "none";
+  if (C) C.style.display = "block";
+})();
+</script>
 </body>
 </html>
