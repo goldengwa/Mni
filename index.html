@@ -51,7 +51,7 @@
     .tags{ display:flex; justify-content:center; gap:10px; margin-bottom:15px; flex-wrap:wrap }
     .tag{
       padding:6px 14px; border-radius:20px; font-size:12px; font-weight:700; color:#fff;
-      background:#fd0000; box-shadow:0 0 10px rgba(228,194,209,1);
+      background:#fd0000; box-shadow:0 8px 18px rgba(0,0,0,.15);
       transition: box-shadow .3s ease, transform .2s ease;
     }
     .tag-blue{ background:#c7d2fe } .tag-yellow{ background:#fde68a }
@@ -253,7 +253,7 @@
 
         <div class="hr"></div>
 
-        <!-- ★추가: 사용자 링크(슬러그) 지정 -->
+        <!-- 사용자 링크(슬러그) 지정 -->
         <div class="row">
           <label>사용자 링크(슬러그) — 영문/숫자/_/-, 3~32자</label>
           <div class="actions">
@@ -398,7 +398,7 @@
   </script>
 
   <script>
-  /* ===== 기본값/유틸(원본 유지) ===== */
+  /* ===== 기본값/유틸 ===== */
   const DEFAULTS = {
     pageTitle: "MyNameis",
     loadingText: "불러오고 있어요",
@@ -450,23 +450,8 @@
   const HEX_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
   const RGB_RE = /^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}(?:\s*,\s*(0|1|0?\.\d+))?\s*\)$/i;
   function isCssColor(v){ return HEX_RE.test(v||"") || RGB_RE.test(v||""); }
-  function applyOverlayColor(color){
-    const c = isCssColor(color) ? color : DEFAULTS.overlayColor;
-    let s = document.getElementById("overlayOverride");
-    if(!s){ s=document.createElement("style"); s.id="overlayOverride"; document.head.appendChild(s); }
-    s.textContent = `body::before{background:${c} !important;}`;
-  }
-  
-  // 상대 휘도(간단 계산) 기준으로 밝으면 진한 글자, 어두우면 흰 글자
-  const L = 0.2126*(r/255) + 0.7152*(g/255) + 0.0722*(b/255);
-  return L > 0.6 ? "#111" : "#fff";
-}
-  function applyCardShadowColor(color){
-    const c = isCssColor(color) ? color : DEFAULTS.cardShadowColor;
-    let s = document.getElementById("cardShadowOverride");
-    if(!s){ s=document.createElement("style"); s.id="cardShadowOverride"; document.head.appendChild(s); }
-    s.textContent = `#content{ box-shadow:0 8px 24px ${c} !important; }`;
-  }
+
+  /* ★ 추가/확인: 자동 대비 계산 */
   function contrastOn(bg){
     let r,g,b;
     if(/^#/.test(bg)){
@@ -479,7 +464,20 @@
       r = m[0]; g = m[1]; b = m[2];
     }
     const L = 0.2126*(r/255) + 0.7152*(g/255) + 0.0722*(b/255);
-    return L > 0.6 ? "#111" : "#fff"; // 밝으면 검정, 어두우면 흰색
+    return L > 0.6 ? "#111" : "#fff";
+  }
+
+  function applyOverlayColor(color){
+    const c = isCssColor(color) ? color : DEFAULTS.overlayColor;
+    let s = document.getElementById("overlayOverride");
+    if(!s){ s=document.createElement("style"); s.id="overlayOverride"; document.head.appendChild(s); }
+    s.textContent = `body::before{background:${c} !important;}`;
+  }
+  function applyCardShadowColor(color){
+    const c = isCssColor(color) ? color : DEFAULTS.cardShadowColor;
+    let s = document.getElementById("cardShadowOverride");
+    if(!s){ s=document.createElement("style"); s.id="cardShadowOverride"; document.head.appendChild(s); }
+    s.textContent = `#content{ box-shadow:0 8px 24px ${c} !important; }`;
   }
 
   function render(cfg){
@@ -498,13 +496,14 @@
     $("#profileImg").src = cfg.profileUrl || "";
     $("#displayName").textContent = cfg.name || "";
 
+    /* ★★ 여기만 교체: 태그 텍스트 자동 대비 + 그림자 기본 동작 */
     const tw = $("#tagsWrap"); tw.innerHTML = "";
     (cfg.tags||[]).forEach(t=>{
       if(!t.text) return;
       const d = document.createElement("div");
       d.className = "tag";
 
-      // 배경색 적용
+      // 배경색 적용 (직접 코드 or 클래스)
       let bgColor = null;
       if (isCssColor(t.color)) {
         bgColor = t.color;
@@ -513,13 +512,13 @@
         d.className = `tag ${t.color || "tag-gray"}`;
       }
 
-      // 실제 배경색 가져오기 (클래스 적용시에도)
+      // 실제 배경색(클래스일 때도 계산)
       const effectiveBg = bgColor || getComputedStyle(d).backgroundColor;
 
-      // 글자색 자동 대비 (contrastOn 함수 사용)
+      // 글자색 자동 대비
       d.style.color = contrastOn(effectiveBg);
 
-      // 그림자색 (지정 없으면 배경색과 동일)
+      // 그림자: 미입력 시 배경색과 동일
       const shadow = (t.shadowColor && isCssColor(t.shadowColor)) ? t.shadowColor : effectiveBg;
       d.style.boxShadow = `0 8px 18px ${shadow}`;
 
@@ -538,7 +537,7 @@
     applyCardShadowColor(cfg.cardShadowColor);
   }
 
-  /* ====== 원본 DOM 바인딩(축약) ====== */
+  /* ====== DOM 바인딩(기존 유지) ====== */
   const panel=$("#settingsPanel"), toggleBtn=$("#settingsToggle"), authToggle=$("#authToggle"), sessionPill=$("#sessionPill");
   const titleInput=$("#titleInput"), loadingMsgInput=$("#loadingMsgInput"), nameInput=$("#nameInput"),
         bgInput=$("#bgInput"), bannerInput=$("#bannerInput"), profileInput=$("#profileInput"),
@@ -638,7 +637,6 @@
   document.getElementById("addLinkBtn").addEventListener("click", ()=> addLinkRow());
   document.getElementById("previewBtn").addEventListener("click", ()=> render(collectForm()));
 
-  /* 저장(원본 유지) */
   document.getElementById("saveBtn").addEventListener("click", async ()=>{
     const c = collectForm();
     localStorage.setItem(LS_KEY, JSON.stringify(c));
@@ -683,7 +681,6 @@
     const clean = new URL(location.href); clean.searchParams.delete("c"); history.replaceState(null,"",clean);
   });
 
-  /* 클라우드 저장/불러오기(원본 유지) */
   async function saveToAccountRemote(cfg){
     const { data:{ user } } = await supabase.auth.getUser();
     if(!user) return alert("로그인이 필요합니다.");
@@ -702,7 +699,6 @@
   document.getElementById("saveToAccountBtn").addEventListener("click", ()=> saveToAccountRemote(collectForm()));
   document.getElementById("loadFromAccountBtn").addEventListener("click", ()=> loadFromAccountRemote());
 
-  /* ===== (원본 유지) 짧은 링크 코드 ===== */
   function genCode(n=8){ const chars="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"; let s=""; for(let i=0;i<n;i++) s+=chars[Math.floor(Math.random()*chars.length)]; return s; }
   async function createShortLink(cfg){
     const { data:{ user } } = await supabase.auth.getUser();
@@ -724,13 +720,11 @@
   }
   document.getElementById("createShortBtn").addEventListener("click", ()=> createShortLink(collectForm()));
 
-  /* ★추가: 사용자 링크(슬러그) 지정 저장 */
   function isValidSlug(s){ return /^[a-zA-Z0-9_-]{3,32}$/.test(s||""); }
   async function publishSlug(slug, cfg){
     if(!isValidSlug(slug)) return alert("영문/숫자/_/-, 3~32자로 입력하세요.");
     const { data:{ user } } = await supabase.auth.getUser();
     if(!user) return alert("로그인 후 게시할 수 있어요.");
-    // 소유자 충돌 검사
     const existed = await supabase.from("short_configs").select("owner_id").eq("code", slug).maybeSingle();
     if(existed.data && existed.data.owner_id && existed.data.owner_id !== user.id){
       return alert("이미 다른 사용자가 사용 중인 링크입니다.");
@@ -746,7 +740,6 @@
     publishSlug(slug, collectForm());
   });
 
-  /* ===== 인증(요약) ===== */
   let currentUser = null;
   const authModal = $("#authModal"), authEmail=$("#authEmail"), authPw=$("#authPw");
   const loginBtn=$("#loginBtn"), registerBtn=$("#registerBtn"), logoutBtn=$("#logoutBtn"), authClose=$("#authClose");
@@ -812,7 +805,6 @@
     else { currentUser=null; sessionPill.style.display="none"; }
   });
 
-  /* ===== 부팅 ===== */
   const initial = (()=>{
     const url = new URL(location.href);
     const c = url.searchParams.get("c");
