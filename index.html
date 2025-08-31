@@ -553,16 +553,16 @@
   }
 
   <script>
-  /* ===== 강력 로딩 컨트롤러 (최소표시+타임아웃, error 미사용) ===== */
+  /* ===== 강력 로딩 컨트롤러 (최소 표시 + 최장 타임아웃) ===== */
   (function(){
     const L = document.getElementById("loading");
     const C = document.getElementById("content");
     let closed = false;
-
-    const MIN_SHOW = 800;   // 최소 0.8초 표시
-    const HARD_MAX = 3500;  // 3.5초 내 무조건 닫기
+  
+    const MIN_SHOW = 900;   // 최소 0.9초는 로딩 유지
+    const HARD_MAX = 5000;  // 5초 안에는 무조건 닫기
     const shownAt  = Date.now();
-
+  
     function reallyClose(){
       if (closed) return;
       try { if (L) L.style.display = "none"; if (C) C.style.display = "block"; } catch(e){}
@@ -575,7 +575,10 @@
       else reallyClose();
     };
 
+    // 네트워크가 매우 느려도 HARD_MAX 내엔 닫기
     setTimeout(window.__closeLoading, HARD_MAX);
+
+    // 치명적 비동기 에러만 감지 (일반 리소스 error는 무시)
     window.addEventListener("unhandledrejection", () => setTimeout(window.__closeLoading, 0));
   })();
   </script>
