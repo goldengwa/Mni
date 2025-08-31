@@ -260,7 +260,7 @@
             <input id="slugInput" type="text" placeholder="예: yunha, 0yunha1, my-name" style="flex:1"/>
             <button class="btn-small btn-primary" id="publishSlugBtn">게시</button>
           </div>
-          <div class="note">공유: <code>현재주소?s=슬러그</code> + (Render 리라이트로 <code>/슬러그</code>도 동작)</div>
+          <div class="note">공유: <code>현재주소?s=슬러그</code> </div>
         </div>
 
         <div class="hr"></div>
@@ -567,7 +567,7 @@
     const C = document.getElementById("content");
     let closed = false;
 
-    const MIN_SHOW = 900;   // 최소 0.9초는 로딩 유지
+    const MIN_SHOW = 2000;   // 최소 2초는 로딩 유지
     const HARD_MAX = 5000;  // 5초 안에는 무조건 닫기
     const shownAt  = Date.now();
 
@@ -883,7 +883,7 @@
     const { error } = await supabase.from("short_configs").upsert({ code: slug, owner_id: user.id, data: cfg }).select("code").single();
     if(error) return alert("게시 실패: "+error.message);
 
-    const url = `${location.origin}${location.pathname}?s=${encodeURIComponent(slug)}`;
+    const url = `https://www.mynameis.r-e.kr/${encodeURIComponent(slug)}`;
     const ok = await copyText(url);
 
     localStorage.setItem(SLUG_KEY, slug);
