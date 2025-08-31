@@ -260,7 +260,7 @@
             <input id="slugInput" type="text" placeholder="예: yunha, 0yunha1, my-name" style="flex:1"/>
             <button class="btn-small btn-primary" id="publishSlugBtn">게시</button>
           </div>
-          <div class="note">공유: <code>현재주소?s=슬러그</code> + (Render 리라이트로 <code>/슬러그</code>도 동작)</div>
+          <div class="note">공유: <code>https://mynameis.r-e.kr/(슬러그) 패널 업데이트 시 다시 게시해주세요.</code> </div>
         </div>
 
         <div class="hr"></div>
@@ -424,7 +424,8 @@
   const isSafeUrl = u => /^https?:\/\//i.test(u||"") || /^data:image\/[a-zA-Z]+;base64,/i.test(u||"");
   const isDataImage = u => /^data:image\/[a-zA-Z]+;base64,/i.test(u||"");
   const LS_KEY = "panelConfig.v2";
-  const SLUG_KEY = "panel.slug";
+  const SLUG_KEY = "panel.slug";          // 저장된 내 슬러그
+  const DRAFT_KEY = "panelDraft.v1";      // 임시저장(세션)
   const LENGTH_LIMIT = 1800;
 
   function encodeCfg(cfg){
@@ -468,41 +469,21 @@
     return L > 0.6 ? "#111" : "#fff";
   }
 
-  /* ===== 변경 1: 더 강한 복사 유틸 ===== */
-  async function copyText(text) {
-    // 1) 최신 Clipboard API
-    try {
-      if (window.isSecureContext && navigator.clipboard?.writeText) {
+  async function copyText(text){
+    try{
+      if (window.isSecureContext && navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(text);
         return true;
       }
-    } catch (e) {
-      // fallthrough
-    }
-
-    // 2) execCommand('copy'): 화면 내 보이는 input을 이용
-    try {
-      const input = document.createElement('input');
-      input.value = text;
-      input.setAttribute('readonly', '');
-      input.style.position = 'fixed';
-      input.style.left = '8px';
-      input.style.top = '8px';
-      input.style.opacity = '0.0001'; // display:none 금지
-      document.body.appendChild(input);
-      input.focus();
-      input.select();
-      input.setSelectionRange(0, input.value.length);
-      const ok = document.execCommand('copy');
-      document.body.removeChild(input);
-      if (ok) return true;
-    } catch (e) {
-      // fallthrough
-    }
-
-    // 3) 최종 프롬프트
-    const manual = prompt("클립보드 권한이 거부되었습니다. 아래 링크를 직접 복사하세요:", text);
-    return !!manual;
+    }catch(e){}
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly','');
+    ta.style.position = 'fixed'; ta.style.top = '-9999px';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length);
+    let ok = false; try{ ok = document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+    return !!ok;
   }
 
   function applyOverlayColor(color){
@@ -565,14 +546,29 @@
     applyCardShadowColor(cfg.cardShadowColor);
   }
 
-  /* ===== 로딩 컨트롤러 (최소 표시 + 최대 타임아웃) ===== */
+  /* === 로딩 화면에만 즉시 스타일 적용(슬러그 로딩 직후) === */
+  function applyLoadingStyle(cfg){
+    if(!cfg) return;
+    const L = document.getElementById("loading");
+    if(!L) return;
+    if (cfg.loadingText) {
+      const t = document.getElementById("loadingText");
+      if (t) t.textContent = cfg.loadingText;
+    }
+    if (cfg.loadingBg)  L.style.background = cfg.loadingBg;
+    if (cfg.loadingDot) {
+      document.querySelectorAll(".dot-loader span").forEach(s=> s.style.background = cfg.loadingDot);
+    }
+  }
+
+  /* ===== 강력 로딩 컨트롤러 (최소 표시 + 최장 타임아웃) ===== */
   (function(){
     const L = document.getElementById("loading");
     const C = document.getElementById("content");
     let closed = false;
 
-    const MIN_SHOW = 900;
-    const HARD_MAX = 5000;
+    const MIN_SHOW = 2000;   // 최소 2초는 로딩 유지
+    const HARD_MAX = 5000;  // 5초 안에는 무조건 닫기
     const shownAt  = Date.now();
 
     function reallyClose(){
@@ -604,11 +600,50 @@
   const slugInput = document.getElementById("slugInput");
 
   function openPanel(o=true){ panel.classList.toggle("open", o) }
+
+  /* ===== 자동 임시저장(새로고침/탭 전환 복구용) ===== */
+  const saveDraftDebounced = debounce(()=> {
+    try{
+      const draft = { cfg: collectForm(), panelOpen: panel.classList.contains("open"), ts: Date.now() };
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    }catch{}
+  }, 400);
+
+  function maybeRestoreDraft(){
+    try{
+      const raw = sessionStorage.getItem(DRAFT_KEY);
+      if(!raw) return;
+      const draft = JSON.parse(raw);
+      if(!draft || !draft.cfg) return;
+      // 뷰어가 아니라 "편집중" 의도를 존중: panelOpen이 true였을 때만 복구
+      if (draft.panelOpen){
+        fillForm(draft.cfg);
+        render(draft.cfg);
+        openPanel(true);
+      }
+    }catch{}
+  }
+
+  function clearDraft(){ try{ sessionStorage.removeItem(DRAFT_KEY); }catch{} }
+
+  function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+
+  // 패널 토글
   toggleBtn.addEventListener("click", ()=>{
     if (!currentUser) { alert("패널을 열기 전에 로그인/회원가입(이메일 인증)해주세요."); openAuth(true); return; }
     const savedSlug = localStorage.getItem(SLUG_KEY);
     if (savedSlug) slugInput.value = savedSlug;
     openPanel(!panel.classList.contains("open"));
+    saveDraftDebounced();
+  });
+
+  // 입력 변화 → 임시저장
+  panel.addEventListener("input", saveDraftDebounced);
+  panel.addEventListener("change", saveDraftDebounced);
+  panel.addEventListener("click", (e)=>{
+    if (e.target.matches(".tag-del,.link-del,#addTagBtn,#addLinkBtn")) {
+      setTimeout(saveDraftDebounced, 0);
+    }
   });
 
   function fileToDataURL(file, cb){ const r=new FileReader(); r.onload=()=>cb(r.result); r.readAsDataURL(file); }
@@ -630,8 +665,8 @@
     inpShadow.value = tag.shadowColor || "";
 
     row.querySelector(".tag-del").addEventListener("click", ()=> row.remove());
-    pickCode.addEventListener("input", e=>{ inpCode.value = e.target.value; render(collectForm()); });
-    pickShadow.addEventListener("input", e=>{ inpShadow.value = e.target.value; render(collectForm()); });
+    pickCode.addEventListener("input", e=>{ inpCode.value = e.target.value; render(collectForm()); saveDraftDebounced(); });
+    pickShadow.addEventListener("input", e=>{ inpShadow.value = e.target.value; render(collectForm()); saveDraftDebounced(); });
 
     tagsList.appendChild(tpl);
   }
@@ -712,6 +747,7 @@
         targetInput.value = dataURL;
         if (typeof after === "function") after(dataURL);
         render(collectForm());
+        saveDraftDebounced();
       });
     });
   }
@@ -719,14 +755,14 @@
   bindFileInput(bannerFile, bannerInput, ()=>{});
   bindFileInput(profileFile, profileInput, (dataURL)=>{ $("#profileImg").src = dataURL; });
 
-  loadingBgPicker?.addEventListener("input", e=>{ loadingBgInput.value = e.target.value; render(collectForm()); });
-  loadingDotPicker?.addEventListener("input", e=>{ loadingDotInput.value = e.target.value; render(collectForm()); });
-  overlayColorPicker?.addEventListener("input", e=>{ overlayColorInput.value = e.target.value; render(collectForm()); });
-  cardShadowColorPicker?.addEventListener("input", e=>{ cardShadowColorInput.value = e.target.value; render(collectForm()); });
+  loadingBgPicker?.addEventListener("input", e=>{ loadingBgInput.value = e.target.value; render(collectForm()); saveDraftDebounced(); });
+  loadingDotPicker?.addEventListener("input", e=>{ loadingDotInput.value = e.target.value; render(collectForm()); saveDraftDebounced(); });
+  overlayColorPicker?.addEventListener("input", e=>{ overlayColorInput.value = e.target.value; render(collectForm()); saveDraftDebounced(); });
+  cardShadowColorPicker?.addEventListener("input", e=>{ cardShadowColorInput.value = e.target.value; render(collectForm()); saveDraftDebounced(); });
 
-  document.getElementById("addTagBtn").addEventListener("click", ()=> addTagRow());
-  document.getElementById("addLinkBtn").addEventListener("click", ()=> addLinkRow());
-  document.getElementById("previewBtn").addEventListener("click", ()=> render(collectForm()));
+  document.getElementById("addTagBtn").addEventListener("click", ()=> { addTagRow(); saveDraftDebounced(); });
+  document.getElementById("addLinkBtn").addEventListener("click", ()=> { addLinkRow(); saveDraftDebounced(); });
+  document.getElementById("previewBtn").addEventListener("click", ()=> { render(collectForm()); saveDraftDebounced(); });
 
   document.getElementById("saveBtn").addEventListener("click", async ()=>{
     const c = collectForm();
@@ -744,6 +780,7 @@
     if (CLOUD_READY && currentUser) { await saveToAccountRemote(c); }
     alert("저장되었습니다.");
     openPanel(false);
+    clearDraft(); // 저장 후 임시초안 제거
   });
 
   document.getElementById("resetBtn").addEventListener("click", ()=>{
@@ -752,6 +789,7 @@
       fillForm(DEFAULTS); render(DEFAULTS);
       const u=new URL(location.href); u.searchParams.delete("c"); history.replaceState(null,"",u);
       alert("초기화했습니다.");
+      clearDraft();
     }
   });
 
@@ -765,7 +803,7 @@
     const inp=document.createElement("input"); inp.type="file"; inp.accept="application/json";
     inp.onchange=()=>{ const f=inp.files[0]; if(!f) return;
       const r=new FileReader();
-      r.onload=()=>{ try{ const c=JSON.parse(r.result); fillForm(c); render(c); alert("가져오기 완료. 저장을 눌러 반영하세요."); }catch{ alert("잘못된 JSON 파일입니다."); } };
+      r.onload=()=>{ try{ const c=JSON.parse(r.result); fillForm(c); render(c); alert("가져오기 완료. 저장을 눌러 반영하세요."); saveDraftDebounced(); }catch{ alert("잘못된 JSON 파일입니다."); } };
       r.readAsText(f);
     };
     inp.click();
@@ -804,6 +842,7 @@
       slugInput.value = loadedSlug;
     }
     const u=new URL(location.href); u.searchParams.delete("c"); history.replaceState(null,"",u);
+    clearDraft();
   }
   document.getElementById("saveToAccountBtn").addEventListener("click", ()=> saveToAccountRemote(collectForm()));
   document.getElementById("loadFromAccountBtn").addEventListener("click", ()=> loadFromAccountRemote());
@@ -832,63 +871,30 @@
   document.getElementById("createShortBtn").addEventListener("click", ()=> createShortLink(collectForm()));
 
   function isValidSlug(s){ return /^[a-zA-Z0-9_-]{3,32}$/.test(s||""); }
-
-  /* ===== 변경 2: 게시 버튼 클릭 즉시 복사 → 업서트 순서로 수정 ===== */
-  document.getElementById("publishSlugBtn").addEventListener("click", async () => {
-    const slug = (slugInput.value || "").trim();
-    if (!isValidSlug(slug)) {
-      alert("영문/숫자/_/-, 3~32자로 입력하세요.");
-      return;
-    }
-    // 현재 클릭 제스처가 살아있을 때 미리 복사 시도
-    const previewUrl = `${location.origin}/${encodeURIComponent(slug)}`;
-    let alreadyCopied = false;
-    try { alreadyCopied = await copyText(previewUrl); } catch(e) { alreadyCopied = false; }
-
-    // 실제 게시(업서트)
-    await publishSlug(slug, collectForm(), { previewUrl, alreadyCopied });
-  });
-
-  async function publishSlug(slug, cfg, opts = {}) {
+  async function publishSlug(slug, cfg){
     if(!isValidSlug(slug)) return alert("영문/숫자/_/-, 3~32자로 입력하세요.");
-
     const { data:{ user } } = await supabase.auth.getUser();
     if(!user) return alert("로그인 후 게시할 수 있어요.");
 
-    // 중복 점검
-    const existed = await supabase.from("short_configs")
-      .select("owner_id")
-      .eq("code", slug)
-      .maybeSingle();
-    if (existed.data && existed.data.owner_id && existed.data.owner_id !== user.id) {
+    const existed = await supabase.from("short_configs").select("owner_id").eq("code", slug).maybeSingle();
+    if(existed.data && existed.data.owner_id && existed.data.owner_id !== user.id){
       return alert("이미 다른 사용자가 사용 중인 링크입니다.");
     }
+    const { error } = await supabase.from("short_configs").upsert({ code: slug, owner_id: user.id, data: cfg }).select("code").single();
+    if(error) return alert("게시 실패: "+error.message);
 
-    // 업서트
-    const { error } = await supabase.from("short_configs")
-      .upsert({ code: slug, owner_id: user.id, data: cfg })
-      .select("code")
-      .single();
-    if(error) return alert("게시 실패: " + error.message);
+    const url = `https://mynameis.r-e.kr/${encodeURIComponent(slug)}`;
+    const ok = await copyText(url);
 
-    // 최종 URL
-    const finalUrl = `${location.origin}/${encodeURIComponent(slug)}`;
     localStorage.setItem(SLUG_KEY, slug);
     slugInput.value = slug;
 
-    // 클릭 시점에서 이미 복사 성공했다면 알림만
-    if (opts.alreadyCopied) {
-      alert(`게시 완료! (클립보드에 복사됨)\n${finalUrl}`);
-      return;
-    }
-    // 아직 복사 안 됐으면 한 번 더 시도
-    const ok = await copyText(finalUrl);
-    if (ok) {
-      alert(`게시 완료! (클립보드에 복사됨)\n${finalUrl}`);
-    } else {
-      prompt("게시 완료! 아래 주소를 직접 복사하세요:", finalUrl);
-    }
+    alert(`게시 완료! ${ok ? '(클립보드에 복사됨)' : '(복사 실패 — 아래 링크를 직접 복사)'}\n${url}`);
   }
+  document.getElementById("publishSlugBtn").addEventListener("click", ()=>{
+    const slug = slugInput.value.trim();
+    publishSlug(slug, collectForm());
+  });
 
   /* ===== 인증 ===== */
   let currentUser = null;
@@ -956,32 +962,13 @@
     else { currentUser=null; sessionPill.style.display="none"; }
   });
 
-  /* ===== 로딩 스타일을 먼저 반영하는 부팅 ===== */
-  (function(){
-    function applyLoadingStyle(cfg){
-      if(!cfg) return;
-      const L = document.getElementById("loading");
-      if(!L) return;
-      if (cfg.loadingText) {
-        const t = document.getElementById("loadingText");
-        if (t) t.textContent = cfg.loadingText;
-      }
-      if (cfg.loadingBg)  L.style.background = cfg.loadingBg;
-      if (cfg.loadingDot) {
-        document.querySelectorAll(".dot-loader span").forEach(s=> s.style.background = cfg.loadingDot);
-      }
-    }
-
-    const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
-    async function withTimeout(promise, ms){
-      return await Promise.race([ promise, sleep(ms).then(()=>null) ]);
-    }
-
-    (async ()=>{
-      const safeClose = window.__closeLoading || (()=>{});
+  /* ===== 부팅 (슬러그 로딩 스타일 선반영 + 폴백) ===== */
+  (async ()=>{
+    const safeClose = window.__closeLoading || (()=>{});
+    try {
+      const url = new URL(location.href);
 
       function getSlug(){
-        const url = new URL(location.href);
         let slug = url.searchParams.get("s");
         if (!slug) {
           const segs = location.pathname.split('/').filter(Boolean);
@@ -992,46 +979,53 @@
         return slug;
       }
 
-      try {
-        const slug = getSlug();
-        let cfg = null;
+      const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
+      async function withTimeout(promise, ms){ return await Promise.race([ promise, sleep(ms).then(()=>null) ]); }
 
-        if (slug && typeof fetchShortByCode === "function") {
-          const early = await withTimeout(fetchShortByCode(slug).catch(()=>null), 800);
-          if (early) applyLoadingStyle(early);
-          cfg = early;
-        }
+      const slug = getSlug();
+      let cfg = null;
 
-        if (!cfg && slug && typeof fetchShortByCode === "function") {
-          cfg = await withTimeout(fetchShortByCode(slug).catch(()=>null), 1200);
-        }
-
-        if (!cfg) {
-          const url = new URL(location.href);
-          const c = url.searchParams.get("c");
-          if (c) {
-            cfg = decodeCfg(c);
-            try { url.searchParams.delete("c"); history.replaceState(null,"",url); } catch {}
-          }
-        }
-
-        if (!cfg) {
-          try{
-            const raw = localStorage.getItem(LS_KEY);
-            if (raw) cfg = JSON.parse(raw);
-          }catch{}
-        }
-
-        if (!cfg) cfg = structuredClone(DEFAULTS);
-
-        try { fillForm(cfg); render(cfg); } catch(e){ console.error(e); render(DEFAULTS); }
-      } catch (e) {
-        console.error("boot failed:", e);
-        try{ render(DEFAULTS); }catch{}
-      } finally {
-        safeClose();
+      // 1) 로딩 화면 스타일만 먼저 반영(최대 800ms)
+      if (slug && typeof fetchShortByCode === "function") {
+        const early = await withTimeout(fetchShortByCode(slug).catch(()=>null), 800);
+        if (early) applyLoadingStyle(early);
+        cfg = early;
       }
-    })();
+
+      // 2) 전체 설정 확보(최대 1200ms)
+      if (!cfg && slug && typeof fetchShortByCode === "function") {
+        cfg = await withTimeout(fetchShortByCode(slug).catch(()=>null), 1200);
+      }
+
+      // 3) ?c 파라미터
+      if (!cfg) {
+        const c = url.searchParams.get("c");
+        if (c) {
+          cfg = decodeCfg(c);
+          try { url.searchParams.delete("c"); history.replaceState(null,"",url); } catch {}
+        }
+      }
+
+      // 4) localStorage
+      if (!cfg) {
+        try{ const raw = localStorage.getItem(LS_KEY); if(raw) cfg = JSON.parse(raw); }catch{}
+      }
+
+      // 5) 기본값
+      if (!cfg) cfg = structuredClone(DEFAULTS);
+
+      // 6) 렌더
+      try { fillForm(cfg); render(cfg); } catch(e){ console.error(e); render(DEFAULTS); }
+
+      // 7) 편집중 복원(세션 임시저장)
+      maybeRestoreDraft();
+
+    } catch (e) {
+      console.error("boot failed:", e);
+      try{ render(DEFAULTS); }catch{}
+    } finally {
+      safeClose();
+    }
   })();
   </script>
 </body>
