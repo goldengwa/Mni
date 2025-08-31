@@ -417,7 +417,26 @@
     ],
     buttons: []
   };
+/* ===== 강력 로딩 컨트롤러 ===== */
+(function(){
+  const L = document.getElementById("loading");
+  const C = document.getElementById("content");
+  let closed = false;
 
+  window.__closeLoading = function(){
+    if (closed) return;
+    try{ if(L) L.style.display="none"; if(C) C.style.display="block"; }catch(e){}
+    closed = true;
+  };
+
+  // 페이지가 다 그려지지 않아도 최장 HARD_MAX 안에는 무조건 닫음
+  const HARD_MAX = 3500; // 3.5초
+  setTimeout(window.__closeLoading, HARD_MAX);
+
+  // 예외가 나도 닫히도록
+  window.addEventListener("error",  window.__closeLoading);
+  window.addEventListener("unhandledrejection", window.__closeLoading);
+})();
   const $ = (s, el=document)=> el.querySelector(s);
   const $$ = (s, el=document)=> [...el.querySelectorAll(s)];
   const isSafeUrl = u => /^https?:\/\//i.test(u||"") || /^data:image\/[a-zA-Z]+;base64,/i.test(u||"");
@@ -898,15 +917,12 @@
     else { currentUser=null; sessionPill.style.display="none"; }
   });
 
-<script>
-// …위쪽 기존 스크립트 유지…
-
-/* ===== 부팅 (Render용: pathname 슬러그 지원) ===== */
+/* ===== 부팅 (Render용: pathname 슬러그 + 타임아웃 폴백) ===== */
 (async ()=>{
   const url = new URL(location.href);
-  let slug = url.searchParams.get("s");
 
-  // ?s가 없으면 경로에서 슬러그 추출 (/yunha, /@yunha 모두 허용)
+  // 1) 슬러그 추출: ?s= 우선, 없으면 /경로 마지막(@허용)
+  let slug = url.searchParams.get("s");
   if(!slug){
     const segs = location.pathname.split('/').filter(Boolean);
     const last = segs[segs.length-1] || "";
@@ -914,48 +930,45 @@
     if(m) slug = m[1];
   }
 
+  // 2) 슬러그 fetch를 1.2초로 타임아웃. 실패/지연이면 다음 소스(?c → local → 기본값)로 폴백
   let cfg = null;
-
-  // 1) 슬러그가 있으면 Supabase에서 먼저 시도 (공개 조회 정책 필요)
+  async function fetchBySlugWithTimeout(code, ms=1200){
+    return await Promise.race([
+      (async()=>{ try{ return await fetchShortByCode(code); }catch{ return null; } })(),
+      new Promise(r=>setTimeout(()=>r(null), ms))
+    ]);
+  }
   if (slug && typeof fetchShortByCode === "function") {
-    try { cfg = await fetchShortByCode(slug); } catch(e){ console.warn(e); }
+    cfg = await fetchBySlugWithTimeout(slug, 1200);
   }
 
-  // 2) ?c 파라미터 (있으면 1회용으로 우선)
+  // 3) ?c
   if (!cfg) {
     const c = url.searchParams.get("c");
     if (c) {
       cfg = decodeCfg(c);
-      // 주소 청소
-      setTimeout(()=>{
-        const clean = new URL(location.href);
-        clean.searchParams.delete("c");
-        history.replaceState(null,"",clean);
-      }, 0);
+      // 주소 깨끗이
+      const clean = new URL(location.href);
+      clean.searchParams.delete("c");
+      history.replaceState(null,"",clean);
     }
   }
 
-  // 3) localStorage
+  // 4) localStorage
   if (!cfg) {
-    try {
+    try{
       const raw = localStorage.getItem(LS_KEY);
       if (raw) cfg = JSON.parse(raw);
-    } catch {}
+    }catch{}
   }
 
-  // 4) 기본값
+  // 5) 기본값
   if (!cfg) cfg = structuredClone(DEFAULTS);
 
-  // 폼/화면 반영
+  // 6) 렌더 → 로딩 닫기(절대 보장)
   fillForm(cfg);
   render(cfg);
-
-  // 로딩 닫기 (너가 쓰는 closeLoading 로직이 없다면 간단히 표시 전환)
-  const L = document.getElementById("loading");
-  const C = document.getElementById("content");
-  if (L) L.style.display = "none";
-  if (C) C.style.display = "block";
+  window.__closeLoading();
 })();
-</script>
 </body>
 </html>
