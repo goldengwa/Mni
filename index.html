@@ -260,7 +260,7 @@
             <input id="slugInput" type="text" placeholder="예: yunha, 0yunha1, my-name" style="flex:1"/>
             <button class="btn-small btn-primary" id="publishSlugBtn">게시</button>
           </div>
-          <div class="note">공유: <code>https://www.mynameis.r-e.kr/(슬러그) 패널 업데이트 시 다시 게시해주세요.</code> </div>
+          <div class="note">공유: <code>https://mynameis.r-e.kr/(슬러그) 패널 업데이트 시 다시 게시해주세요.</code> </div>
         </div>
 
         <div class="hr"></div>
@@ -883,7 +883,7 @@
     const { error } = await supabase.from("short_configs").upsert({ code: slug, owner_id: user.id, data: cfg }).select("code").single();
     if(error) return alert("게시 실패: "+error.message);
 
-    const url = `https://www.mynameis.r-e.kr/${encodeURIComponent(slug)}`;
+    const url = `https://mynameis.r-e.kr/${encodeURIComponent(slug)}`;
     const ok = await copyText(url);
 
     localStorage.setItem(SLUG_KEY, slug);
