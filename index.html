@@ -579,7 +579,9 @@
     window.addEventListener("unhandledrejection", () => setTimeout(window.__closeLoading, 0));
   })();
   </script>
+
   
+  <script>
   /* ====== DOM 바인딩 ====== */
   const panel=$("#settingsPanel"), toggleBtn=$("#settingsToggle"), authToggle=$("#authToggle"), sessionPill=$("#sessionPill");
   const titleInput=$("#titleInput"), loadingMsgInput=$("#loadingMsgInput"), nameInput=$("#nameInput"),
@@ -915,7 +917,6 @@
     else { currentUser=null; sessionPill.style.display="none"; }
   });
     
-  <script>
   /* ===== 부팅 (Render용: pathname 슬러그 + 타임아웃 폴백) ===== */
   (async ()=>{
     const url = new URL(location.href);
