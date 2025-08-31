@@ -1,0 +1,10 @@
+<script>
+(function(){
+  var m = location.pathname.match(/^\/(?:@)?([A-Za-z0-9_-]{3,32})\/?$/);
+  var url = location.origin + "/index.html";
+  if (m) url += "?s=" + encodeURIComponent(m[1]);
+  if (location.search) url += (url.indexOf("?")>=0?"&":"?") + location.search.slice(1);
+  if (location.hash)   url += location.hash;
+  location.replace(url);
+})();
+</script>
