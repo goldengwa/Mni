@@ -423,6 +423,7 @@
   const isSafeUrl = u => /^https?:\/\//i.test(u||"") || /^data:image\/[a-zA-Z]+;base64,/i.test(u||"");
   const isDataImage = u => /^data:image\/[a-zA-Z]+;base64,/i.test(u||"");
   const LS_KEY = "panelConfig.v2";
+  const SLUG_KEY = "panel.slug"; /* ← 추가: 슬러그 로컬 보관 키 */
   const LENGTH_LIMIT = 1800;
 
   function encodeCfg(cfg){
@@ -450,31 +451,8 @@
   const HEX_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
   const RGB_RE = /^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}(?:\s*,\s*(0|1|0?\.\d+))?\s*\)$/i;
   function isCssColor(v){ return HEX_RE.test(v||"") || RGB_RE.test(v||""); }
-	
-	// 안전한 클립보드 복사 (HTTPS + iOS Safari 대응)
-  async function copyText(text){
-    try{
-      if (window.isSecureContext && navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(text);
-        return true;
-      }
-    }catch(e){}
-    // 폴백: 임시 textarea 사용
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.setAttribute('readonly','');
-    ta.style.position = 'fixed';
-    ta.style.top = '-9999px';
-    document.body.appendChild(ta);
-    ta.focus(); ta.select();
-    ta.setSelectionRange(0, ta.value.length); // iOS 대응
-    let ok = false;
-    try{ ok = document.execCommand('copy'); }catch(e){}
-    document.body.removeChild(ta);
-    return !!ok;
-  }
 
-  /* ★ 추가/확인: 자동 대비 계산 */
+  /* 자동 대비 계산 */
   function contrastOn(bg){
     let r,g,b;
     if(/^#/.test(bg)){
@@ -488,6 +466,28 @@
     }
     const L = 0.2126*(r/255) + 0.7152*(g/255) + 0.0722*(b/255);
     return L > 0.6 ? "#111" : "#fff";
+  }
+
+  /* 안전한 클립보드 복사(폴백 포함) */
+  async function copyText(text){
+    try{
+      if (window.isSecureContext && navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    }catch(e){}
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly','');
+    ta.style.position = 'fixed';
+    ta.style.top = '-9999px';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    let ok = false;
+    try{ ok = document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+    return !!ok;
   }
 
   function applyOverlayColor(color){
@@ -519,14 +519,12 @@
     $("#profileImg").src = cfg.profileUrl || "";
     $("#displayName").textContent = cfg.name || "";
 
-    /* ★★ 여기만 교체: 태그 텍스트 자동 대비 + 그림자 기본 동작 */
+    /* 태그: 배경 코드/클래스 모두 지원 + 자동 대비 + 그림자 기본 */
     const tw = $("#tagsWrap"); tw.innerHTML = "";
     (cfg.tags||[]).forEach(t=>{
       if(!t.text) return;
       const d = document.createElement("div");
       d.className = "tag";
-
-      // 배경색 적용 (직접 코드 or 클래스)
       let bgColor = null;
       if (isCssColor(t.color)) {
         bgColor = t.color;
@@ -534,17 +532,10 @@
       } else {
         d.className = `tag ${t.color || "tag-gray"}`;
       }
-
-      // 실제 배경색(클래스일 때도 계산)
       const effectiveBg = bgColor || getComputedStyle(d).backgroundColor;
-
-      // 글자색 자동 대비
       d.style.color = contrastOn(effectiveBg);
-
-      // 그림자: 미입력 시 배경색과 동일
       const shadow = (t.shadowColor && isCssColor(t.shadowColor)) ? t.shadowColor : effectiveBg;
       d.style.boxShadow = `0 8px 18px ${shadow}`;
-
       d.textContent = t.text;
       tw.appendChild(d);
     });
@@ -560,7 +551,7 @@
     applyCardShadowColor(cfg.cardShadowColor);
   }
 
-  /* ====== DOM 바인딩(기존 유지) ====== */
+  /* ====== DOM 바인딩 ====== */
   const panel=$("#settingsPanel"), toggleBtn=$("#settingsToggle"), authToggle=$("#authToggle"), sessionPill=$("#sessionPill");
   const titleInput=$("#titleInput"), loadingMsgInput=$("#loadingMsgInput"), nameInput=$("#nameInput"),
         bgInput=$("#bgInput"), bannerInput=$("#bannerInput"), profileInput=$("#profileInput"),
@@ -570,30 +561,57 @@
   const loadingBgPicker=$("#loadingBgPicker"), loadingDotPicker=$("#loadingDotPicker");
   const overlayColorInput=$("#overlayColorInput"), overlayColorPicker=$("#overlayColorPicker");
   const cardShadowColorInput=$("#cardShadowColorInput"), cardShadowColorPicker=$("#cardShadowColorPicker");
+  const slugInput = document.getElementById("slugInput");
 
   function openPanel(o=true){ panel.classList.toggle("open", o) }
   toggleBtn.addEventListener("click", ()=>{
     if (!currentUser) { alert("패널을 열기 전에 로그인/회원가입(이메일 인증)해주세요."); openAuth(true); return; }
+    /* ← 추가: 패널 열기 전 로컬 저장 슬러그 주입 */
+    const savedSlug = localStorage.getItem(SLUG_KEY);
+    if (savedSlug) slugInput.value = savedSlug;
     openPanel(!panel.classList.contains("open"));
   });
 
   function fileToDataURL(file, cb){ const r=new FileReader(); r.onload=()=>cb(r.result); r.readAsDataURL(file); }
+
+  /* 수정: tag 색 보존(코드 vs 클래스 구분) */
   function addTagRow(tag={text:"", color:"tag-gray", shadowColor:""}){
     const tpl = document.getElementById("tagTpl").content.cloneNode(true);
     const row = tpl.querySelector(".tag-item");
-    row.querySelector(".tag-text").value = tag.text||"";
-    row.querySelector(".tag-color").value = tag.color||"tag-gray";
+
+    const inpText   = row.querySelector(".tag-text");
+    const selClass  = row.querySelector(".tag-color");
+    const inpCode   = row.querySelector(".tag-color-code");
+    const pickCode  = row.querySelector(".tag-color-picker");
+    const inpShadow = row.querySelector(".tag-shadow-code");
+    const pickShadow= row.querySelector(".tag-shadow-picker");
+
+    inpText.value = tag.text || "";
+
+    if (isCssColor(tag.color)) {
+      // 직접 색상 코드는 코드 칸에만 채움 (select는 기본 유지)
+      inpCode.value = tag.color;
+    } else {
+      selClass.value = tag.color || "tag-gray";
+      inpCode.value = "";
+    }
+
+    inpShadow.value = tag.shadowColor || "";
+
     row.querySelector(".tag-del").addEventListener("click", ()=> row.remove());
-    row.querySelector(".tag-color-picker").addEventListener("input", e=>{ row.querySelector(".tag-color-code").value = e.target.value; render(collectForm()); });
-    row.querySelector(".tag-shadow-picker").addEventListener("input", e=>{ row.querySelector(".tag-shadow-code").value = e.target.value; render(collectForm()); });
+    pickCode.addEventListener("input", e=>{ inpCode.value = e.target.value; render(collectForm()); });
+    pickShadow.addEventListener("input", e=>{ inpShadow.value = e.target.value; render(collectForm()); });
+
     tagsList.appendChild(tpl);
   }
+
   function addLinkRow(link={label:"", url:""}){
     const tpl = document.getElementById("linkTpl").content.cloneNode(true); const row = tpl.querySelector(".link-item");
     row.querySelector(".link-label").value = link.label||""; row.querySelector(".link-url").value = link.url||"";
     row.querySelector(".link-del").addEventListener("click", ()=> row.remove());
     linksList.appendChild(tpl);
   }
+
   function fillForm(from){
     titleInput.value=from.pageTitle||""; loadingMsgInput.value=from.loadingText||"";
     nameInput.value=from.name||"";
@@ -608,23 +626,38 @@
     cardShadowColorInput.value= from.cardShadowColor|| DEFAULTS.cardShadowColor;
     if(/^#/.test(overlayColorInput.value))   overlayColorPicker.value   = overlayColorInput.value;
     if(/^#/.test(cardShadowColorInput.value)) cardShadowColorPicker.value= cardShadowColorInput.value;
+
     tagsList.innerHTML=""; (from.tags||[]).forEach(addTagRow);
     linksList.innerHTML=""; (from.buttons||[]).forEach(addLinkRow);
+
+    /* 슬러그가 meta에 실려 오면 입력/로컬에도 반영 (클라우드 불러오기 대비) */
+    const metaSlug = from?.meta?.slug;
+    if (metaSlug) {
+      slugInput.value = metaSlug;
+      localStorage.setItem(SLUG_KEY, metaSlug);
+    }
   }
+
   function collectForm(){
-    const tags = [...document.querySelectorAll(".tag-item")].map(el=>({
-      text: el.querySelector(".tag-text").value.trim(),
-      color: (el.querySelector(".tag-color-code").value.trim() || el.querySelector(".tag-color").value || "tag-gray"),
-      shadowColor: el.querySelector(".tag-shadow-code").value.trim()
-    })).filter(t=>t.text);
+    const tags = [...document.querySelectorAll(".tag-item")].map(el=>{
+      const text   = el.querySelector(".tag-text").value.trim();
+      const clsVal = el.querySelector(".tag-color").value;
+      const codeVal= el.querySelector(".tag-color-code").value.trim();
+      const color  = codeVal || clsVal || "tag-gray";
+      const shadowColor = el.querySelector(".tag-shadow-code").value.trim();
+      return { text, color, shadowColor };
+    }).filter(t=>t.text);
+
     const buttons = [...document.querySelectorAll(".link-item")].map(el=>({
       label: el.querySelector(".link-label").value.trim(),
       url: el.querySelector(".link-url").value.trim()
     })).filter(b=> b.label && isSafeUrl(b.url));
+
     const bgVal=isDataImage(bgInput.value.trim())?bgInput.value.trim():DEFAULTS.backgroundUrl;
     const bannerVal=isDataImage(bannerInput.value.trim())?bannerInput.value.trim():DEFAULTS.bannerUrl;
     const profileVal=isDataImage(profileInput.value.trim())?profileInput.value.trim():DEFAULTS.profileUrl;
-    return {
+
+    const cfg = {
       pageTitle: titleInput.value.trim() || nameInput.value.trim() || DEFAULTS.pageTitle,
       loadingText: loadingMsgInput.value.trim() || DEFAULTS.loadingText,
       backgroundUrl:bgVal, bannerUrl:bannerVal, profileUrl:profileVal,
@@ -635,6 +668,12 @@
       cardShadowColor: cardShadowColorInput.value.trim() || DEFAULTS.cardShadowColor,
       tags, buttons
     };
+
+    /* meta에 슬러그 동봉(클라우드 저장용) */
+    const slugVal = slugInput.value.trim();
+    if (slugVal) cfg.meta = { ...(cfg.meta||{}), slug: slugVal };
+
+    return cfg;
   }
 
   function bindFileInput(fileEl, targetInput, after){
@@ -663,16 +702,22 @@
   document.getElementById("saveBtn").addEventListener("click", async ()=>{
     const c = collectForm();
     localStorage.setItem(LS_KEY, JSON.stringify(c));
+    /* 슬러그도 로컬 유지 */
+    const sv = (c.meta && c.meta.slug) ? c.meta.slug : slugInput.value.trim();
+    if (sv) localStorage.setItem(SLUG_KEY, sv);
+
     render(c);
     const enc = encodeCfg(c);
     const u = new URL(location.href);
     if (enc.length <= LENGTH_LIMIT) u.searchParams.set("c", enc);
     else u.searchParams.delete("c");
     history.replaceState(null,"",u);
+
     if (CLOUD_READY && currentUser) { await saveToAccountRemote(c); }
     alert("저장되었습니다.");
     openPanel(false);
   });
+
   document.getElementById("resetBtn").addEventListener("click", ()=>{
     if(confirm("모든 설정을 기본값으로 되돌릴까요?")){
       localStorage.setItem(LS_KEY, JSON.stringify(DEFAULTS));
@@ -681,11 +726,13 @@
       alert("초기화했습니다.");
     }
   });
+
   document.getElementById("exportBtn").addEventListener("click", ()=>{
     const blob = new Blob([JSON.stringify(collectForm(),null,2)], {type:"application/json"});
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download="panel-config.json"; a.click();
     URL.revokeObjectURL(a.href);
   });
+
   document.getElementById("importBtn").addEventListener("click", ()=>{
     const inp=document.createElement("input"); inp.type="file"; inp.accept="application/json";
     inp.onchange=()=>{ const f=inp.files[0]; if(!f) return;
@@ -695,34 +742,48 @@
     };
     inp.click();
   });
-  document.getElementById("shareLinkBtn").addEventListener("click", ()=>{
+
+  document.getElementById("shareLinkBtn").addEventListener("click", async ()=>{
     const encoded = encodeCfg(collectForm());
     if (encoded.length > LENGTH_LIMIT) { alert("링크가 너무 길어요. ‘짧은 링크’를 사용하세요."); return; }
     const url = new URL(location.href); url.searchParams.set("c", encoded);
-    navigator.clipboard?.writeText(url.toString());
-    prompt("공유 링크:", url.toString());
+    const ok = await copyText(url.toString());
+    if(!ok) prompt("복사에 실패했어요. 아래 링크를 직접 복사하세요:", url.toString());
     const clean = new URL(location.href); clean.searchParams.delete("c"); history.replaceState(null,"",clean);
   });
 
   async function saveToAccountRemote(cfg){
     const { data:{ user } } = await supabase.auth.getUser();
     if(!user) return alert("로그인이 필요합니다.");
+    /* 슬러그 meta 포함 보장 */
+    const s = slugInput.value.trim();
+    if (s) cfg.meta = { ...(cfg.meta||{}), slug: s };
+
     const { error } = await supabase.from("configs").upsert({ user_id:user.id, data:cfg });
-    if (error) return alert(error.message);
+    if (error) return alert("클라우드 저장 실패: " + error.message);
     alert("클라우드에 저장 완료");
   }
+
   async function loadFromAccountRemote(){
     const { data:{ user } } = await supabase.auth.getUser();
     if(!user) return alert("로그인이 필요합니다.");
     const { data, error } = await supabase.from("configs").select("data").eq("user_id", user.id).single();
     if (error || !data) return alert("계정에 저장된 설정이 없습니다.");
-    const cfg = data.data; fillForm(cfg); render(cfg); localStorage.setItem(LS_KEY, JSON.stringify(cfg));
+    const cfg = data.data;
+    fillForm(cfg); render(cfg); localStorage.setItem(LS_KEY, JSON.stringify(cfg));
+    /* meta.slug 동기화 */
+    const loadedSlug = cfg?.meta?.slug;
+    if (loadedSlug) {
+      localStorage.setItem(SLUG_KEY, loadedSlug);
+      slugInput.value = loadedSlug;
+    }
     const u=new URL(location.href); u.searchParams.delete("c"); history.replaceState(null,"",u);
   }
   document.getElementById("saveToAccountBtn").addEventListener("click", ()=> saveToAccountRemote(collectForm()));
   document.getElementById("loadFromAccountBtn").addEventListener("click", ()=> loadFromAccountRemote());
 
   function genCode(n=8){ const chars="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"; let s=""; for(let i=0;i<n;i++) s+=chars[Math.floor(Math.random()*chars.length)]; return s; }
+
   async function createShortLink(cfg){
     const { data:{ user } } = await supabase.auth.getUser();
     if(!user){ alert("짧은 링크를 만들려면 먼저 로그인해주세요."); openAuth(true); return; }
@@ -733,8 +794,9 @@
     const { data, error } = await supabase.from("short_configs").upsert({ code, owner_id: user.id, data: cfg }).select("code").single();
     if(error){ alert("저장 실패: "+error.message); return; }
     const shortUrl = `${location.origin}${location.pathname}?s=${encodeURIComponent(data.code)}`;
-    await navigator.clipboard?.writeText(shortUrl);
-    prompt("짧은 링크가 만들어졌어요. 복사해서 사용하세요:", shortUrl);
+    const ok2 = await copyText(shortUrl);
+    if(!ok2){ prompt("짧은 링크가 만들어졌어요. 아래에서 직접 복사하세요:", shortUrl); }
+    else { alert("짧은 링크가 클립보드에 복사되었습니다!\n" + shortUrl); }
   }
   async function fetchShortByCode(code){
     const { data, error } = await supabase.from("short_configs").select("data").eq("code", code).single();
@@ -748,21 +810,29 @@
     if(!isValidSlug(slug)) return alert("영문/숫자/_/-, 3~32자로 입력하세요.");
     const { data:{ user } } = await supabase.auth.getUser();
     if(!user) return alert("로그인 후 게시할 수 있어요.");
+
     const existed = await supabase.from("short_configs").select("owner_id").eq("code", slug).maybeSingle();
     if(existed.data && existed.data.owner_id && existed.data.owner_id !== user.id){
       return alert("이미 다른 사용자가 사용 중인 링크입니다.");
     }
     const { error } = await supabase.from("short_configs").upsert({ code: slug, owner_id: user.id, data: cfg }).select("code").single();
     if(error) return alert("게시 실패: "+error.message);
+
     const url = `${location.origin}${location.pathname}?s=${encodeURIComponent(slug)}`;
     const ok = await copyText(url);
-    alert(`게시 완료! ${ok ? '(클립보드에 복사됨)' : '(복사 실패 — 아래 링크를 직접 복사하세요)'}\n${url}`);
+
+    /* ← 추가: 슬러그 로컬/입력칸에 저장해 패널 재오픈 시 유지 */
+    localStorage.setItem(SLUG_KEY, slug);
+    slugInput.value = slug;
+
+    alert(`게시 완료! ${ok ? '(클립보드에 복사됨)' : '(복사 실패 — 아래 링크를 직접 복사)'}\n${url}`);
   }
   document.getElementById("publishSlugBtn").addEventListener("click", ()=>{
-    const slug = document.getElementById("slugInput").value.trim();
+    const slug = slugInput.value.trim();
     publishSlug(slug, collectForm());
   });
 
+  /* ===== 인증(요약) ===== */
   let currentUser = null;
   const authModal = $("#authModal"), authEmail=$("#authEmail"), authPw=$("#authPw");
   const loginBtn=$("#loginBtn"), registerBtn=$("#registerBtn"), logoutBtn=$("#logoutBtn"), authClose=$("#authClose");
@@ -828,6 +898,7 @@
     else { currentUser=null; sessionPill.style.display="none"; }
   });
 
+  /* ===== 부팅 ===== */
   const initial = (()=>{
     const url = new URL(location.href);
     const c = url.searchParams.get("c");
