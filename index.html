@@ -559,9 +559,8 @@
     const C = document.getElementById("content");
     let closed = false;
 
-    // 최소 표시 시간(밀리초) + 최장 강제 종료 시간
-    const MIN_SHOW = 800;   // 최소 0.8초는 로딩을 보여줌
-    const HARD_MAX = 3500;  // 3.5초 내엔 무조건 닫음
+    const MIN_SHOW = 800;   // 최소 0.8초 표시
+    const HARD_MAX = 3500;  // 3.5초 내 무조건 닫기
     const shownAt  = Date.now();
 
     function reallyClose(){
@@ -572,17 +571,11 @@
 
     window.__closeLoading = function(){
       const elapsed = Date.now() - shownAt;
-      if (elapsed < MIN_SHOW) {
-        setTimeout(reallyClose, MIN_SHOW - elapsed); // 최소 표시 보장
-      } else {
-        reallyClose();
-      }
+      if (elapsed < MIN_SHOW) setTimeout(reallyClose, MIN_SHOW - elapsed);
+      else reallyClose();
     };
 
-    // 네트워크가 느려도 HARD_MAX 안에는 닫히도록
     setTimeout(window.__closeLoading, HARD_MAX);
-
-    // script 내부 비동기 에러만 감지 (일반 리소스 error는 무시)
     window.addEventListener("unhandledrejection", () => setTimeout(window.__closeLoading, 0));
   })();
   </script>
