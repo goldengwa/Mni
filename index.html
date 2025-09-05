@@ -959,7 +959,8 @@
     if (event === "PASSWORD_RECOVERY"){ openAuth(false); openPw(true); return; }
     const user = session?.user;
     if (user) { currentUser=user.email; sessionPill.textContent=`로그인: ${user.email}`; sessionPill.style.display=""; }
-    else { currentUser=null; sessionPill.style.display="none"; }
+    else { currentUser=null; sessionPill.style.display="none"; 
+    if (event === "SIGNED_IN") { loadFromAccountRemote().catch(console.error);}
   });
 
   /* ===== 부팅 (슬러그 로딩 스타일 선반영 + 폴백) ===== */
