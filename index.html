@@ -862,7 +862,8 @@
   async function loadFromAccountRemote(){
     const { data:{ user } } = await supabase.auth.getUser();
     if(!user) return alert("로그인이 필요합니다.");
-    const { data, error } = await supabase.from("configs").select("data").eq("user_id", user.id).single();
+    const { data, error } = await supabase.from("configs").select("data, updated_at").eq("user_id", user.id).order("updated_at,{ascending:false}).limit(1).maybeSingle();
+    return !!data;                                                                        
     if (error || !data) return alert("계정에 저장된 설정이 없습니다.");
     const cfg = data.data;
     fillForm(cfg); render(cfg); localStorage.setItem(LS_KEY, JSON.stringify(cfg));
