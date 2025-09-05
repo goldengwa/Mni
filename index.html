@@ -387,6 +387,14 @@
     const SUPABASE_URL = "https://jutgrivlikaflkhbdhar.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp1dGdyaXZsaWthZmxraGJkaGFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxNTk1MTEsImV4cCI6MjA3MTczNTUxMX0.qGsSDiqtzoUYWvWruRGMzzorDVQAO0MLEpIpgX_BpP8";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+if (window.supabase && typeof supabase.auth?.onAuthStateChange === "function" && typeof loadFromAccountRemote === "function") {
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+      try { await loadFromAccountRemote(); } catch(e) {}
+    }
+  });
+}
+
     const CLOUD_READY = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("<YOUR-") && !SUPABASE_ANON_KEY.includes("<YOUR-");
     window.addEventListener("DOMContentLoaded", ()=>{
       if(!CLOUD_READY){
@@ -396,6 +404,14 @@
         document.getElementById("createShortBtn").style.display="none";
       }
     });
+document.addEventListener("DOMContentLoaded", async () => {
+  if (!window.supabase || typeof supabase.auth?.getSession !== "function" || typeof loadFromAccountRemote !== "function") return;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) { await loadFromAccountRemote().catch(()=>{}); }
+  } catch {}
+});
+
   </script>
 
   <script>
