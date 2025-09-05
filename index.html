@@ -849,7 +849,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     const { data:{ user } } = await supabase.auth.getUser();
     if(!user) return alert("로그인이 필요합니다.");
     const { data, error } = await supabase.from("configs").select("data").eq("user_id", user.id).single();
-    if (error || !data) return alert("계정에 저장된 설정이 없습니다.");
+    if (error || !data) {
+      localStorage.setItem(LS_KEY, JSON.stringify(DEFAULTS));
+      fillForm(DEFAULTS); render(DEFAULTS);
+      const u=new URL(location.href); u.searchParams.delete("c"); history.replaceState(null,"",u);
+      alert("계정에 저장된 설정이 없습니다.");
+      clearDraft();
+    };
     const cfg = data.data;
     fillForm(cfg); render(cfg); localStorage.setItem(LS_KEY, JSON.stringify(cfg));
     const loadedSlug = cfg?.meta?.slug;
