@@ -387,6 +387,21 @@
     const SUPABASE_URL = "https://jutgrivlikaflkhbdhar.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp1dGdyaXZsaWthZmxraGJkaGFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxNTk1MTEsImV4cCI6MjA3MTczNTUxMX0.qGsSDiqtzoUYWvWruRGMzzorDVQAO0MLEpIpgX_BpP8";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+if (window.supabase && typeof supabase.auth?.onAuthStateChange === "function") {
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    try {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        if (typeof loadFromAccountRemote === "function") {
+          const ok = await loadFromAccountRemote().catch(()=>false);
+          notify(ok ? "계정에서 불러왔습니다." : "계정에 저장된 설정이 없습니다.");
+        }
+      }
+    } catch (e) {
+      console.error("onAuthStateChange handler error:", e);
+    }
+  });
+}
+
     const CLOUD_READY = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("<YOUR-") && !SUPABASE_ANON_KEY.includes("<YOUR-");
     window.addEventListener("DOMContentLoaded", ()=>{
       if(!CLOUD_READY){
@@ -396,11 +411,26 @@
         document.getElementById("createShortBtn").style.display="none";
       }
     });
+document.addEventListener("DOMContentLoaded", async () => {
+  if (!window.supabase) return;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session && typeof loadFromAccountRemote === "function") {
+      const ok = await loadFromAccountRemote().catch(()=>false);
+      notify(ok ? "계정에서 불러왔습니다." : "계정에 저장된 설정이 없습니다.");
+    }
+  } catch (e) {
+    console.error("session restore failed:", e);
+  }
+});
+
   </script>
 
   <script>
   /* ===== 기본값/유틸 ===== */
-  const DEFAULTS = {
+  function notify(msg){ try{ showToast(msg); }catch(e){ try{ showStatus(msg); }catch{ alert(msg); } } }
+
+const DEFAULTS = {
     pageTitle: "MyNameis",
     loadingText: "불러오고 있어요",
     backgroundUrl: "https://img.freepik.com/premium-photo/abstract-background-design-hd-olive-green-color_851755-74064.jpg?semt=ais_hybrid&w=740&q=80",
@@ -824,7 +854,7 @@
     const s = slugInput.value.trim();
     if (s) cfg.meta = { ...(cfg.meta||{}), slug: s };
 
-    const { error } = await supabase.from("configs").upsert({ user_id:user.id, data:cfg });
+    const { error } = await supabase.from("configs").upsert({ user_id:user.id, data:cfg, updated_at:new Date().toISOString() }, { onConflict:"user_id" });
     if (error) return alert("클라우드 저장 실패: " + error.message);
     alert("클라우드에 저장 완료");
   }
@@ -832,10 +862,11 @@
   async function loadFromAccountRemote(){
     const { data:{ user } } = await supabase.auth.getUser();
     if(!user) return alert("로그인이 필요합니다.");
-    const { data, error } = await supabase.from("configs").select("data").eq("user_id", user.id).single();
-    if (error || !data) return alert("계정에 저장된 설정이 없습니다.");
+    const { data, error } = await supabase.from("configs").select("data").eq("user_id", user.id).order("updated_at",{ascending:false}).limit(1).maybeSingle();
+    if (error || !data) return false;
     const cfg = data.data;
     fillForm(cfg); render(cfg); localStorage.setItem(LS_KEY, JSON.stringify(cfg));
+  return true;
     const loadedSlug = cfg?.meta?.slug;
     if (loadedSlug) {
       localStorage.setItem(SLUG_KEY, loadedSlug);
@@ -856,7 +887,7 @@
     ask = (ask||"").trim();
     if(ask && !/^[a-zA-Z0-9_-]{4,32}$/.test(ask)){ alert("형식이 올바르지 않아요."); return; }
     const code = ask || genCode(8);
-    const { data, error } = await supabase.from("short_configs").upsert({ code, owner_id: user.id, data: cfg }).select("code").single();
+    const { data, error } = await supabase.from("short_configs").upsert({ code, owner_id: user.id, data: cfg }).select("code").order("updated_at",{ascending:false}).limit(1).maybeSingle();
     if(error){ alert("저장 실패: "+error.message); return; }
     const shortUrl = `${location.origin}${location.pathname}?s=${encodeURIComponent(data.code)}`;
     const ok2 = await copyText(shortUrl);
@@ -864,7 +895,7 @@
     else { alert("짧은 링크가 클립보드에 복사되었습니다!\n" + shortUrl); }
   }
   async function fetchShortByCode(code){
-    const { data, error } = await supabase.from("short_configs").select("data").eq("code", code).single();
+    const { data, error } = await supabase.from("short_configs").select("data").eq("code", code).order("updated_at",{ascending:false}).limit(1).maybeSingle();
     if(error){ console.warn(error.message); return null; }
     return data?.data || null;
   }
@@ -880,7 +911,7 @@
     if(existed.data && existed.data.owner_id && existed.data.owner_id !== user.id){
       return alert("이미 다른 사용자가 사용 중인 링크입니다.");
     }
-    const { error } = await supabase.from("short_configs").upsert({ code: slug, owner_id: user.id, data: cfg }).select("code").single();
+    const { error } = await supabase.from("short_configs").upsert({ code: slug, owner_id: user.id, data: cfg }).select("code").order("updated_at",{ascending:false}).limit(1).maybeSingle();
     if(error) return alert("게시 실패: "+error.message);
 
     const url = `https://mynameis.r-e.kr/${encodeURIComponent(slug)}`;
