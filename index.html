@@ -428,19 +428,7 @@
   const DRAFT_KEY = "panelDraft.v1";      // 임시저장(세션)
   const LENGTH_LIMIT = 1800;
 
-  
-// === ADD: slug cache ===
-const SLUG_CACHE_PREFIX = "slugcfg.";
-function cacheSlugCfg(slug, cfg) {
-  try { localStorage.setItem(SLUG_CACHE_PREFIX + slug, JSON.stringify(cfg)); } catch {}
-}
-function loadCachedSlugCfg(slug) {
-  try {
-    const raw = localStorage.getItem(SLUG_CACHE_PREFIX + slug);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-function encodeCfg(cfg){
+  function encodeCfg(cfg){
     const json = JSON.stringify(cfg);
     const bytes = new TextEncoder().encode(json);
     let bin = ""; for (let i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
@@ -579,8 +567,8 @@ function encodeCfg(cfg){
     const C = document.getElementById("content");
     let closed = false;
 
-    const MIN_SHOW = 1200;   // 최소 2초는 로딩 유지
-    const HARD_MAX = 8000;  // 5초 안에는 무조건 닫기
+    const MIN_SHOW = 2000;   // 최소 2초는 로딩 유지
+    const HARD_MAX = 5000;  // 5초 안에는 무조건 닫기
     const shownAt  = Date.now();
 
     function reallyClose(){
@@ -994,15 +982,10 @@ function encodeCfg(cfg){
       const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
       async function withTimeout(promise, ms){ return await Promise.race([ promise, sleep(ms).then(()=>null) ]); }
 
-      \1
+      const slug = getSlug();
+      let cfg = null;
 
-// === ADD: cached slug config first ===
-let __cached = null;
-if (slug) {
-  __cached = loadCachedSlugCfg(slug);
-  if (__cached) { try { applyLoadingStyle(__cached); } catch{}; cfg = __cached; }
-}
-// 1) 로딩 화면 스타일만 먼저 반영(최대 800ms)
+      // 1) 로딩 화면 스타일만 먼저 반영(최대 800ms)
       if (slug && typeof fetchShortByCode === "function") {
         const early = await withTimeout(fetchShortByCode(slug).catch(()=>null), 800);
         if (early) applyLoadingStyle(early);
@@ -1029,15 +1012,7 @@ if (slug) {
       }
 
       // 5) 기본값
-      if (!cfg) {
-  if (slug) {
-    const lt = document.getElementById("loadingText");
-    if (lt) lt.textContent = "링크 설정을 찾는 중…(잠시 후 기본 화면)";
-    const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
-    await sleep(1000);
-  }
-  cfg = structuredClone(DEFAULTS);
-}
+      if (!cfg) cfg = structuredClone(DEFAULTS);
 
       // 6) 렌더
       try { fillForm(cfg); render(cfg); } catch(e){ console.error(e); render(DEFAULTS); }
