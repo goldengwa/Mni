@@ -387,6 +387,24 @@
     const SUPABASE_URL = "https://jutgrivlikaflkhbdhar.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp1dGdyaXZsaWthZmxraGJkaGFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxNTk1MTEsImV4cCI6MjA3MTczNTUxMX0.qGsSDiqtzoUYWvWruRGMzzorDVQAO0MLEpIpgX_BpP8";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    if (window.supabase && typeof supabase.auth?.onAuthStateChange === "function") {
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        try {
+          if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+            if (typeof loadFromAccountRemote === "function") {
+              const ok = await loadFromAccountRemote().catch(()=>false);
+              notify(ok ? "계정에서 불러왔습니다." : "계정에 저장된 설정이 없습니다.");
+            }
+          }
+          if (event === "SIGNED_OUT" || event === "USER_DELETED") {
+            // 필요하면 여기서 기본값으로 전환하거나 메시지만 띄우세요.
+            // notify("로그아웃되었습니다.");
+          }
+        } catch (e) {
+          console.error("onAuthStateChange handler error:", e);
+        }
+      });
+    }
     const CLOUD_READY = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("<YOUR-") && !SUPABASE_ANON_KEY.includes("<YOUR-");
     window.addEventListener("DOMContentLoaded", ()=>{
       if(!CLOUD_READY){
@@ -394,6 +412,18 @@
         document.getElementById("saveToAccountBtn").style.display="none";
         document.getElementById("loadFromAccountBtn").style.display="none";
         document.getElementById("createShortBtn").style.display="none";
+      }
+    });
+    document.addEventListener("DOMContentLoaded", async () => {
+      if (!window.supabase) return;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && typeof loadFromAccountRemote === "function") {
+          const ok = await loadFromAccountRemote().catch(()=>false);
+          notify(ok ? "계정에서 불러왔습니다." : "계정에 저장된 설정이 없습니다.");
+        }
+      } catch (e) {
+        console.error("session restore failed:", e);
       }
     });
   </script>
