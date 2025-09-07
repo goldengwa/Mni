@@ -396,6 +396,14 @@
         document.getElementById("createShortBtn").style.display="none";
       }
     });
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    if (!window.supabase || typeof supabase.auth?.getSession !== "function" || typeof loadFromAccountRemote !== "function") return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) { await loadFromAccountRemote().catch(()=>{}); }
+  } catch {}
+});
+
   </script>
 
   <script>
@@ -939,6 +947,7 @@
       return;
     }
     currentUser = data.user.email; sessionPill.textContent=`로그인: ${currentUser}`; sessionPill.style.display="";
+    try{ await loadFromAccountRemote(); }catch{};
     openAuth(false);
   });
   logoutBtn.addEventListener("click", async ()=>{
@@ -956,6 +965,10 @@
     if (user) { currentUser=user.email; sessionPill.textContent=`로그인: ${user.email}`; sessionPill.style.display=""; }
   });
   supabase.auth.onAuthStateChange((event, session)=>{
+    if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && typeof loadFromAccountRemote === "function") {
+      try { await loadFromAccountRemote(); } catch(e) {}
+    }
+
     if (event === "PASSWORD_RECOVERY"){ openAuth(false); openPw(true); return; }
     const user = session?.user;
     if (user) { currentUser=user.email; sessionPill.textContent=`로그인: ${user.email}`; sessionPill.style.display=""; }
