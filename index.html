@@ -440,21 +440,7 @@
       const bytes = new Uint8Array([...bin].map(ch=>ch.charCodeAt(0)));
       const json = new TextDecoder().decode(bytes);
       return JSON.parse(json);
-    }
-function stripSlugFromURL(){
-  try{
-    const u = new URL(location.href);
-    let changed = false;
-    if (u.searchParams.has("s")) { u.searchParams.delete("s"); changed = true; }
-    const segs = u.pathname.split("/").filter(Boolean);
-    if (segs.length && /^[A-Za-z0-9_-]{3,32}$/.test(segs[segs.length-1])) {
-      u.pathname = "/";
-      changed = true;
-    }
-    if (changed) history.replaceState(null, "", u);
-  }catch{}
-}
-catch(e){ return null; }
+    }catch(e){ return null; }
   }
   function cleanCParam(){
     const u = new URL(location.href);
@@ -953,7 +939,6 @@ catch(e){ return null; }
       return;
     }
     currentUser = data.user.email; sessionPill.textContent=`로그인: ${currentUser}`; sessionPill.style.display="";
-    stripSlugFromURL();
     openAuth(false);
   });
   logoutBtn.addEventListener("click", async ()=>{
