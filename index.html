@@ -387,14 +387,6 @@
     const SUPABASE_URL = "https://jutgrivlikaflkhbdhar.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp1dGdyaXZsaWthZmxraGJkaGFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxNTk1MTEsImV4cCI6MjA3MTczNTUxMX0.qGsSDiqtzoUYWvWruRGMzzorDVQAO0MLEpIpgX_BpP8";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-if (window.supabase && typeof supabase.auth?.onAuthStateChange === "function" && typeof loadFromAccountRemote === "function") {
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-      try { await loadFromAccountRemote(); } catch(e) {}
-    }
-  });
-}
-
     const CLOUD_READY = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("<YOUR-") && !SUPABASE_ANON_KEY.includes("<YOUR-");
     window.addEventListener("DOMContentLoaded", ()=>{
       if(!CLOUD_READY){
@@ -404,14 +396,6 @@ if (window.supabase && typeof supabase.auth?.onAuthStateChange === "function" &&
         document.getElementById("createShortBtn").style.display="none";
       }
     });
-document.addEventListener("DOMContentLoaded", async () => {
-  if (!window.supabase || typeof supabase.auth?.getSession !== "function" || typeof loadFromAccountRemote !== "function") return;
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) { await loadFromAccountRemote().catch(()=>{}); }
-  } catch {}
-});
-
   </script>
 
   <script>
@@ -456,7 +440,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       const bytes = new Uint8Array([...bin].map(ch=>ch.charCodeAt(0)));
       const json = new TextDecoder().decode(bytes);
       return JSON.parse(json);
-    }catch(e){ return null; }
+    }
+function stripSlugFromURL(){
+  try{
+    const u = new URL(location.href);
+    let changed = false;
+    if (u.searchParams.has("s")) { u.searchParams.delete("s"); changed = true; }
+    const segs = u.pathname.split("/").filter(Boolean);
+    if (segs.length && /^[A-Za-z0-9_-]{3,32}$/.test(segs[segs.length-1])) {
+      u.pathname = "/";
+      changed = true;
+    }
+    if (changed) history.replaceState(null, "", u);
+  }catch{}
+}
+catch(e){ return null; }
   }
   function cleanCParam(){
     const u = new URL(location.href);
@@ -849,13 +847,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const { data:{ user } } = await supabase.auth.getUser();
     if(!user) return alert("로그인이 필요합니다.");
     const { data, error } = await supabase.from("configs").select("data").eq("user_id", user.id).single();
-    if (error || !data) {
-      localStorage.setItem(LS_KEY, JSON.stringify(DEFAULTS));
-      fillForm(DEFAULTS); render(DEFAULTS);
-      const u=new URL(location.href); u.searchParams.delete("c"); history.replaceState(null,"",u);
-      alert("계정에 저장된 설정이 없습니다.");
-      clearDraft();
-    };
+    if (error || !data) return alert("계정에 저장된 설정이 없습니다.");
     const cfg = data.data;
     fillForm(cfg); render(cfg); localStorage.setItem(LS_KEY, JSON.stringify(cfg));
     const loadedSlug = cfg?.meta?.slug;
@@ -961,6 +953,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
     currentUser = data.user.email; sessionPill.textContent=`로그인: ${currentUser}`; sessionPill.style.display="";
+    stripSlugFromURL();
     openAuth(false);
   });
   logoutBtn.addEventListener("click", async ()=>{
