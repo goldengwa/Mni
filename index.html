@@ -598,7 +598,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     window.__closeLoading = function(){
       const elapsed = Date.now() - shownAt;
-      const EXTRA_DELAY = 3000;  // 사용자 요청: 계정 설정이 적용된 뒤에도 3초는 더 보여주기
+      const EXTRA_DELAY = 1800;  // 사용자 요청: 계정 설정이 적용된 뒤에도 3초는 더 보여주기
       const wait = Math.max(MIN_SHOW - elapsed, 0) + EXTRA_DELAY;
       setTimeout(reallyClose, wait);
     };
