@@ -598,8 +598,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     window.__closeLoading = function(){
       const elapsed = Date.now() - shownAt;
-      if (elapsed < MIN_SHOW) setTimeout(reallyClose, MIN_SHOW - elapsed);
-      else reallyClose();
+      const EXTRA_DELAY = 3000;  // 사용자 요청: 계정 설정이 적용된 뒤에도 3초는 더 보여주기
+      const wait = Math.max(MIN_SHOW - elapsed, 0) + EXTRA_DELAY;
+      setTimeout(reallyClose, wait);
     };
 
     setTimeout(window.__closeLoading, HARD_MAX);
