@@ -909,7 +909,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const { error } = await supabase.from("short_configs").upsert({ code: slug, owner_id: user.id, data: cfg }).select("code").single();
     if(error) return alert("게시 실패: "+error.message);
 
-    const url = `https://mynameis.r-e.kr/{encodeURIComponent(slug)}`;
+    const url = `https://mynameis.r-e.kr/'encodeURIComponent(slug);
     const ok = await copyText(url);
 
     localStorage.setItem(SLUG_KEY, slug);
