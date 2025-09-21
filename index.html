@@ -273,6 +273,7 @@
           <div class="actions">
             <button class="btn-small" id="previewBtn">미리보기 적용</button>
             <button class="btn-small" id="shareLinkBtn">공유 링크 만들기</button>
+            <button class="btn-small btn-primary" id="createShortBtn">짧은 링크 만들기</button>
             <button class="btn-small" id="saveToAccountBtn">계정에 저장(클라우드)</button>
             <button class="btn-small" id="loadFromAccountBtn">계정에서 불러오기</button>
           </div>
@@ -874,6 +875,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function genCode(n=8){ const chars="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"; let s=""; for(let i=0;i<n;i++) s+=chars[Math.floor(Math.random()*chars.length)]; return s; }
 
+  async function createShortLink(cfg){
+    const { data:{ user } } = await supabase.auth.getUser();
+    if(!user){ alert("짧은 링크를 만들려면 먼저 로그인해주세요."); openAuth(true); return; }
+    let ask = prompt("짧은 코드(영문/숫자/언더바/하이픈, 4~32자). 비우면 자동 생성됩니다.","");
+    ask = (ask||"").trim();
+    if(ask && !/^[a-zA-Z0-9_-]{4,32}$/.test(ask)){ alert("형식이 올바르지 않아요."); return; }
+    const code = ask || genCode(8);
+    const { data, error } = await supabase.from("short_configs").upsert({ code, owner_id: user.id, data: cfg }).select("code").single();
+    if(error){ alert("저장 실패: "+error.message); return; }
+    const shortUrl = `${location.origin}${location.pathname}?s=${encodeURIComponent(data.code)}`;
+    const ok2 = await copyText(shortUrl);
+    if(!ok2){ prompt("짧은 링크가 만들어졌어요. 아래에서 직접 복사하세요:", shortUrl); }
+    else { alert("짧은 링크가 클립보드에 복사되었습니다!\n" + shortUrl); }
+  }
   async function fetchShortByCode(code){
     const { data, error } = await supabase.from("short_configs").select("data").eq("code", code).single();
     if(error){ console.warn(error.message); return null; }
