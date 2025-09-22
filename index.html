@@ -272,12 +272,10 @@
           <label>공유</label>
           <div class="actions">
             <button class="btn-small" id="previewBtn">미리보기 적용</button>
-            <button class="btn-small" id="shareLinkBtn">공유 링크 만들기</button>
-            <button class="btn-small btn-primary" id="createShortBtn">짧은 링크 만들기</button>
             <button class="btn-small" id="saveToAccountBtn">계정에 저장(클라우드)</button>
             <button class="btn-small" id="loadFromAccountBtn">계정에서 불러오기</button>
           </div>
-          <div class="note">URL이 너무 길면 자동으로 주소에 저장하지 않습니다. 공유는 “짧은 링크”를 사용하세요.</div>
+          <div class="note">URL이 너무 길면 자동으로 주소에 저장하지 않습니다. 공유는 ”사용자 링크”를 사용하세요.</div>
         </div>
       </div>
     </div>
@@ -829,14 +827,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     inp.click();
   });
 
-  document.getElementById("shareLinkBtn").addEventListener("click", async ()=>{
-    const encoded = encodeCfg(collectForm());
-    if (encoded.length > LENGTH_LIMIT) { alert("링크가 너무 길어요. ‘짧은 링크’를 사용하세요."); return; }
-    const url = new URL(location.href); url.searchParams.set("c", encoded);
-    const ok = await copyText(url.toString());
-    if(!ok) prompt("복사에 실패했어요. 아래 링크를 직접 복사하세요:", url.toString());
-    const clean = new URL(location.href); clean.searchParams.delete("c"); history.replaceState(null,"",clean);
-  });
 
   async function saveToAccountRemote(cfg){
     const { data:{ user } } = await supabase.auth.getUser();
@@ -875,20 +865,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function genCode(n=8){ const chars="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"; let s=""; for(let i=0;i<n;i++) s+=chars[Math.floor(Math.random()*chars.length)]; return s; }
 
-  async function createShortLink(cfg){
-    const { data:{ user } } = await supabase.auth.getUser();
-    if(!user){ alert("짧은 링크를 만들려면 먼저 로그인해주세요."); openAuth(true); return; }
-    let ask = prompt("짧은 코드(영문/숫자/언더바/하이픈, 4~32자). 비우면 자동 생성됩니다.","");
-    ask = (ask||"").trim();
-    if(ask && !/^[a-zA-Z0-9_-]{4,32}$/.test(ask)){ alert("형식이 올바르지 않아요."); return; }
-    const code = ask || genCode(8);
-    const { data, error } = await supabase.from("short_configs").upsert({ code, owner_id: user.id, data: cfg }).select("code").single();
-    if(error){ alert("저장 실패: "+error.message); return; }
-    const shortUrl = `${location.origin}${location.pathname}?s=${encodeURIComponent(data.code)}`;
-    const ok2 = await copyText(shortUrl);
-    if(!ok2){ prompt("짧은 링크가 만들어졌어요. 아래에서 직접 복사하세요:", shortUrl); }
-    else { alert("짧은 링크가 클립보드에 복사되었습니다!\n" + shortUrl); }
-  }
+
   async function fetchShortByCode(code){
     const { data, error } = await supabase.from("short_configs").select("data").eq("code", code).single();
     if(error){ console.warn(error.message); return null; }
@@ -898,7 +875,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function isValidSlug(s){ return /^[a-zA-Z0-9_-]{3,32}$/.test(s||""); }
   async function publishSlug(slug, cfg){
-    if(!isValidSlug(slug)) return alert("영문/숫자/_/-, 3~32자로 입력하세요.");
+    if(!isValidSlug(slug)) return alert("영문,숫자,_,-, 3~32자로 입력하세요.");
     const { data:{ user } } = await supabase.auth.getUser();
     if(!user) return alert("로그인 후 게시할 수 있어요.");
 
