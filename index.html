@@ -1034,4 +1034,53 @@
       }
 
       const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
-      async function withTimeout(promise, ms){ return await
+      async function withTimeout(promise, ms){ return await Promise.race([ promise, sleep(ms).then(()=>null) ]); }
+
+      const slug = getSlug();
+      let cfg = null;
+
+      // 1) 로딩 화면 스타일만 먼저 반영(최대 800ms)
+      if (slug && typeof fetchShortByCode === "function") {
+        const early = await withTimeout(fetchShortByCode(slug).catch(()=>null), 800);
+        if (early) applyLoadingStyle(early);
+        cfg = early;
+      }
+
+      // 2) 전체 설정 확보(최대 1200ms)
+      if (!cfg && slug && typeof fetchShortByCode === "function") {
+        cfg = await withTimeout(fetchShortByCode(slug).catch(()=>null), 1200);
+      }
+
+      // 3) ?c 파라미터
+      if (!cfg) {
+        const c = url.searchParams.get("c");
+        if (c) {
+          cfg = decodeCfg(c);
+          try { url.searchParams.delete("c"); history.replaceState(null,"",url); } catch {}
+        }
+      }
+
+      // 4) localStorage
+      if (!cfg) {
+        try{ const raw = localStorage.getItem(LS_KEY); if(raw) cfg = JSON.parse(raw); }catch{}
+      }
+
+      // 5) 기본값
+      if (!cfg) cfg = structuredClone(DEFAULTS);
+
+      // 6) 렌더
+      try { fillForm(cfg); render(cfg); } catch(e){ console.error(e); render(DEFAULTS); }
+
+      // 7) 편집중 복원(세션 임시저장)
+      maybeRestoreDraft();
+
+    } catch (e) {
+      console.error("boot failed:", e);
+      try{ render(DEFAULTS); }catch{}
+    } finally {
+      safeClose();
+    }
+  })();
+  </script>
+</body>
+</html>
