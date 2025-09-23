@@ -831,7 +831,7 @@
     history.replaceState(null,"",u);
 
     if (CLOUD_READY && currentUser) { await saveToAccountRemote(c); }
-    alert("저장되었습니다.");
+    toast("저장되었습니다.");
     openPanel(false);
     clearDraft();
   });
@@ -949,7 +949,7 @@
     localStorage.setItem(SLUG_KEY, slug);
     slugInput.value = slug;
 
-    alert(`게시 완료! ${ok ? '(클립보드에 복사됨)' : '(복사 실패 — 아래 링크를 직접 복사)'}\n${url}`);
+    toast(`게시 완료! ${ok ? '(클립보드에 복사됨)' : '(복사 실패 — 아래 링크를 직접 복사)'}\n${url}`);
   }
   document.getElementById("publishSlugBtn").addEventListener("click", ()=>{
     const slug = slugInput.value.trim();
