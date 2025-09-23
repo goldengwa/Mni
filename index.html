@@ -134,61 +134,22 @@
       .sp-body{ max-height:calc(85vh - 56px) }
     }
   
-/* === Requested hides === */
-#shareLinkBtn, #createShortBtn { display:none !important; }
-#bgInput, #bannerInput, #profileInput { display:none !important; }
-
-/* === Crop modal === */
-#cropModal {
-  position: fixed; inset: 0; display: none; z-index: 1400;
-  background: rgba(0,0,0,.55);
-  align-items: center; justify-content: center;
-}
-#cropBox {
-  background: #111; color:#fff; width: min(92vw, 980px); max-height: 90vh;
-  border-radius: 12px; box-shadow: 0 18px 48px rgba(0,0,0,.35);
-  display:flex; flex-direction:column; overflow:hidden;
-}
-#cropHead {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.12); background:#1a1a1a;
-}
-#cropTitle { font-weight:800; font-size:14px }
-#cropClose { background:none; border:none; color:#fff; font-size:18px; cursor:pointer }
-
-#cropBody {
-  padding: 12px; background:#111; display:flex; justify-content:center; align-items:center;
-}
-#cropStage {
-  position:relative; width:100%; height: min(64vh, 640px); background:#000;
-  display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:8px;
-}
-#cropImg { max-width: 100%; max-height: 100%; display:block; }
-
-/* selection */
-#selBox {
-  position:absolute; border: 2px solid #fff; border-radius: 8px;
-  box-shadow: 0 0 0 30000px rgba(0,0,0,.45) inset;
-}
-.sel-h {
-  position:absolute; width:14px; height:14px; background:#fff; border-radius:50%;
-  margin:-7px 0 0 -7px; box-shadow:0 2px 6px rgba(0,0,0,.35);
-}
-.sel-h.nw{ left:0; top:0; cursor:nwse-resize } .sel-h.n{ left:50%; top:0; cursor:ns-resize }
-.sel-h.ne{ left:100%; top:0; cursor:nesw-resize } .sel-h.e{ left:100%; top:50%; cursor:ew-resize }
-.sel-h.se{ left:100%; top:100%; cursor:nwse-resize } .sel-h.s{ left:50%; top:100%; cursor:ns-resize }
+/* === Crop modal (minimal) === */
+#cropModal{ position:fixed; inset:0; display:none; z-index:1400; background:rgba(0,0,0,.55); align-items:center; justify-content:center }
+#cropBox{ background:#111; color:#fff; width:min(92vw,980px); max-height:90vh; border-radius:12px; box-shadow:0 18px 48px rgba(0,0,0,.35); display:flex; flex-direction:column; overflow:hidden }
+#cropHead{ display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.12); background:#1a1a1a }
+#cropTitle{ font-weight:800; font-size:14px } #cropClose{ background:none; border:none; color:#fff; font-size:18px; cursor:pointer }
+#cropBody{ padding:12px; background:#111; display:flex; justify-content:center; align-items:center }
+#cropStage{ position:relative; width:100%; height:min(64vh,640px); background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:8px }
+#cropImg{ max-width:100%; max-height:100%; display:block }
+#selBox{ position:absolute; border:2px solid #fff; border-radius:8px; box-shadow:0 0 0 30000px rgba(0,0,0,.45) inset }
+.sel-h{ position:absolute; width:14px; height:14px; background:#fff; border-radius:50%; margin:-7px 0 0 -7px; box-shadow:0 2px 6px rgba(0,0,0,.35) }
+.sel-h.nw{ left:0; top:0; cursor:nwse-resize } .sel-h.n{ left:50%; top:0; cursor:ns-resize } .sel-h.ne{ left:100%; top:0; cursor:nesw-resize }
+.sel-h.e{ left:100%; top:50%; cursor:ew-resize } .sel-h.se{ left:100%; top:100%; cursor:nwse-resize } .sel-h.s{ left:50%; top:100%; cursor:ns-resize }
 .sel-h.sw{ left:0; top:100%; cursor:nesw-resize } .sel-h.w{ left:0; top:50%; cursor:ew-resize }
-
-#cropFoot {
-  display:flex; gap:8px; justify-content:flex-end; padding:12px 16px;
-  border-top:1px solid rgba(255,255,255,.12); background:#1a1a1a;
-}
-.crop-btn {
-  background:#fff; color:#111; border:none; border-radius:8px; font-weight:800; font-size:13px;
-  padding:9px 14px; cursor:pointer;
-}
-.crop-btn.secondary { background:transparent; color:#fff; border:1px solid rgba(255,255,255,.2) }
-.note small{ opacity:.8 }
+#cropFoot{ display:flex; gap:8px; justify-content:flex-end; padding:12px 16px; border-top:1px solid rgba(255,255,255,.12); background:#1a1a1a }
+.crop-btn{ background:#fff; color:#111; border:none; border-radius:8px; font-weight:800; font-size:13px; padding:9px 14px; cursor:pointer }
+.crop-btn.secondary{ background:transparent; color:#fff; border:1px solid rgba(255,255,255,.2) }
 
   </style>
 </head>
@@ -276,16 +237,12 @@
 <label>배경 오버레이 색 (CSS Color)</label>
 <input id="overlayColorInput" placeholder="rgba(255,255,255,0.35) / #ffffff80" type="text"/>
 <input class="color-picker" id="overlayColorPicker" type="color"/>
-<input id="overlayAlphaRange" type="range" min="0" max="100" value="35" style="width:100%"/>
-<div class="note">오버레이 투명도: <span id="overlayAlphaVal">35</span>%</div>
 <div class="note">투명도는 <code>rgba(r,g,b,a)</code> 형태 추천.</div>
 </div>
 <div>
 <label>카드 그림자 색 (CSS Color)</label>
 <input id="cardShadowColorInput" placeholder="rgba(0,0,0,0.25) / #00000040" type="text"/>
 <input class="color-picker" id="cardShadowColorPicker" type="color"/>
-<input id="shadowAlphaRange" type="range" min="0" max="100" value="25" style="width:100%"/>
-<div class="note">그림자 투명도: <span id="shadowAlphaVal">25</span>%</div>
 </div>
 </div>
 <div class="hr"></div>
@@ -620,173 +577,106 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
-/* === Color alpha helpers === */
-function __parseRGBA(c){
-  c = (c||"").trim();
-  if(/^#/.test(c)){
-    let h = c.slice(1); if(h.length===3) h = h.split('').map(x=>x+x).join('');
-    const n = parseInt(h,16); return [(n>>16)&255,(n>>8)&255,(n)&255,1];
-  }
-  const m = c.match(/rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(0|1|0?\.\d+))?\s*\)/i);
-  if(m) return [parseInt(m[1]),parseInt(m[2]),parseInt(m[3]), m[4]!==undefined?parseFloat(m[4]):1];
-  return [255,255,255,1];
-}
-function __rgbaStr([r,g,b,a]){ return `rgba(${r},${g},${b},${Math.max(0,Math.min(1,a))})`; }
-function __setAlpha(color, pct){ const v=__parseRGBA(color); v[3]=Math.max(0,Math.min(1,pct/100)); return __rgbaStr(v); }
-
-/* === Crop modal core === */
+/* === Minimal crop modal (no other behavior changed) === */
 (function(){
   const modal = document.getElementById('cropModal');
-  const img = document.getElementById('cropImg');
+  const img   = document.getElementById('cropImg');
   const stage = document.getElementById('cropStage');
-  const sel = document.getElementById('selBox');
+  const sel   = document.getElementById('selBox');
   const btnClose = document.getElementById('cropClose');
-  const btnCancel = document.getElementById('cropCancel');
+  const btnCancel= document.getElementById('cropCancel');
   const btnApply = document.getElementById('cropApply');
 
-  let cropKind = null; // 'banner' | 'bg' | 'profile'
-  let imgNatural = {w:0,h:0};
-  let selBox = {x:0,y:0,w:100,h:100}; // in stage coords
-  let startState = null;
-  let aspect = 1;
+  let aspect = 1, kind = null, onDone = null;
+  let nat = {w:0,h:0};
+  let box = {x:0,y:0,w:100,h:100};
+  let start = null;
 
-  function openCrop(objectURL, kind){
-    cropKind = kind;
-    aspect = (kind==='profile') ? 1 :
-             (kind==='banner' ? (__getCardTopAspect()||2.5) :
-              (__getWindowAspect()|| (16/9)));
+  function getAspectFor(kind){
+    if (kind==='profile') return 1;
+    if (kind==='banner'){
+      const ct = document.querySelector('.card-top');
+      if (ct){ const r=ct.getBoundingClientRect(); if (r.height>0) return r.width/r.height; }
+      return 16/9;
+    }
+    // bg
+    return window.innerWidth/Math.max(1,window.innerHeight);
+  }
+  function openModal(objectURL, k, done){
+    kind = k; onDone = done; aspect = getAspectFor(k);
     modal.style.display='flex';
     img.src = objectURL;
-    img.onload = ()=>{
-      imgNatural = {w: img.naturalWidth, h: img.naturalHeight};
-      // fit selection to 70% of stage with fixed aspect
+    img.onload=()=>{
+      nat = {w: img.naturalWidth, h: img.naturalHeight};
       const st = stage.getBoundingClientRect();
-      const sw = st.width * 0.7, sh = sw / aspect;
-      const maxH = st.height * 0.7;
-      let w = sw, h = sh;
-      if (h > maxH){ h = maxH; w = h*aspect; }
-      selBox.w = w; selBox.h = h;
-      selBox.x = (st.width - w)/2; selBox.y = (st.height - h)/2;
-      drawSel();
+      const sw = st.width * 0.7, sh = sw / aspect, mh = st.height * 0.7;
+      let w=sw, h=sh; if(h>mh){ h=mh; w=h*aspect; }
+      box = { x:(st.width-w)/2, y:(st.height-h)/2, w, h };
+      draw();
     };
-    document.addEventListener('keydown', keyHandler);
+    document.addEventListener('keydown', key);
   }
-  function closeCrop(apply){
+  function closeModal(apply){
     if (apply) applyCrop();
     modal.style.display='none';
-    img.src=''; cropKind=null; startState=null;
-    document.removeEventListener('keydown', keyHandler);
+    img.src=''; start=null; onDone=null;
+    document.removeEventListener('keydown', key);
   }
-  function keyHandler(e){
-    if (e.key==='Escape') closeCrop(false);
-    if (e.key==='Enter') closeCrop(true);
-  }
-  btnClose.addEventListener('click', ()=>closeCrop(false));
-  btnCancel.addEventListener('click', ()=>closeCrop(false));
-  btnApply.addEventListener('click', ()=>closeCrop(true));
+  function key(e){ if(e.key==='Escape') closeModal(false); if(e.key==='Enter') closeModal(true); }
 
-  function __getCardTopAspect(){
-    const ct = document.querySelector('.card-top');
-    if (!ct) return null;
-    const r = ct.getBoundingClientRect();
-    return r.width / r.height;
-  }
-  function __getWindowAspect(){
-    return window.innerWidth / Math.max(1, window.innerHeight);
-  }
-
-  function clampSel(){
+  function draw(){ sel.style.left = (stage.offsetLeft+box.x)+'px'; sel.style.top=(stage.offsetTop+box.y)+'px'; sel.style.width=box.w+'px'; sel.style.height=box.h+'px'; }
+  function clamp(){
     const st = stage.getBoundingClientRect();
-    if (selBox.x<0) selBox.x=0;
-    if (selBox.y<0) selBox.y=0;
-    if (selBox.x+selBox.w>st.width) selBox.x=st.width-selBox.w;
-    if (selBox.y+selBox.h>st.height) selBox.y=st.height-selBox.h;
-  }
-  function drawSel(){
-    const st = stage.getBoundingClientRect();
-    sel.style.left = (stage.offsetLeft + selBox.x) + 'px';
-    sel.style.top  = (stage.offsetTop  + selBox.y) + 'px';
-    sel.style.width  = selBox.w + 'px';
-    sel.style.height = selBox.h + 'px';
+    if(box.x<0) box.x=0; if(box.y<0) box.y=0;
+    if(box.x+box.w>st.width) box.x = st.width - box.w;
+    if(box.y+box.h>st.height) box.y = st.height - box.h;
   }
 
-  // dragging/resizing
   sel.addEventListener('pointerdown', (e)=>{
     const dir = e.target.dataset?.dir || '';
-    startState = { dir, x0:e.clientX, y0:e.clientY, ...selBox };
+    const st = stage.getBoundingClientRect();
+    start = {dir, x0:e.clientX, y0:e.clientY, ...box, st};
     sel.setPointerCapture(e.pointerId);
     e.preventDefault();
   });
   sel.addEventListener('pointermove', (e)=>{
-    if (!startState) return;
-    const dx = e.clientX - startState.x0;
-    const dy = e.clientY - startState.y0;
-    let {x,y,w,h} = startState;
-
-    if (!startState.dir){
-      x += dx; y += dy;
-    } else {
-      // fixed aspect resizing
-      if (startState.dir.includes('e') || startState.dir.includes('w')){
-        w = startState.w + (startState.dir.includes('e') ? dx : -dx);
-        h = w / aspect;
-        if (startState.dir.includes('n')){ y = startState.y + (startState.h - h); }
-      }
-      if (startState.dir.includes('n') || startState.dir.includes('s')){
-        h = startState.h + (startState.dir.includes('s') ? dy : -dy);
-        w = h * aspect;
-        if (startState.dir.includes('w')){ x = startState.x + (startState.w - w); }
-      }
+    if(!start) return;
+    const dx = e.clientX - start.x0, dy = e.clientY - start.y0;
+    let {x,y,w,h} = start;
+    if (!start.dir){ x += dx; y += dy; }
+    else{
+      if (start.dir.includes('e')||start.dir.includes('w')){ w = start.w + (start.dir.includes('e')?dx:-dx); h = w/aspect; if(start.dir.includes('n')) y = start.y + (start.h-h); }
+      if (start.dir.includes('n')||start.dir.includes('s')){ h = start.h + (start.dir.includes('s')?dy:-dy); w = h*aspect; if(start.dir.includes('w')) x = start.x + (start.w-w); }
     }
-    selBox = {x,y,w:Math.max(40,w),h:Math.max(40,h)};
-    clampSel(); drawSel();
+    box = { x, y, w:Math.max(40,w), h:Math.max(40,h) }; clamp(); draw();
   });
-  sel.addEventListener('pointerup', ()=>{ startState=null; });
+  sel.addEventListener('pointerup', ()=>{ start=null; });
+
+  btnClose.addEventListener('click', ()=>closeModal(false));
+  btnCancel.addEventListener('click', ()=>closeModal(false));
+  btnApply.addEventListener('click', ()=>closeModal(true));
 
   function applyCrop(){
-    if (!imgNatural.w || !imgNatural.h) return;
-    // Compute selection rect in image pixel coords
+    if (!nat.w || !nat.h || !onDone) return;
     const st = stage.getBoundingClientRect();
-    const imgRect = img.getBoundingClientRect();
-    // Get scale from displayed image to natural size
-    const scaleX = imgNatural.w / imgRect.width;
-    const scaleY = imgNatural.h / imgRect.height;
-    const sx = Math.max(0, (selBox.x + stage.offsetLeft - imgRect.left) * scaleX);
-    const sy = Math.max(0, (selBox.y + stage.offsetTop  - imgRect.top)  * scaleY);
-    const sw = Math.max(1, selBox.w * scaleX);
-    const sh = Math.max(1, selBox.h * scaleY);
-
+    const ir = img.getBoundingClientRect();
+    const scaleX = nat.w / ir.width;
+    const scaleY = nat.h / ir.height;
+    const sx = Math.max(0, (box.x + stage.offsetLeft - ir.left) * scaleX);
+    const sy = Math.max(0, (box.y + stage.offsetTop  - ir.top)  * scaleY);
+    const sw = Math.max(1, box.w * scaleX);
+    const sh = Math.max(1, box.h * scaleY);
     const canvas = document.createElement('canvas');
-    canvas.width = Math.round(sw);
-    canvas.height= Math.round(sh);
+    canvas.width = Math.round(sw); canvas.height = Math.round(sh);
     const ctx = canvas.getContext('2d');
     ctx.drawImage(img, Math.round(sx), Math.round(sy), Math.round(sw), Math.round(sh), 0,0, canvas.width, canvas.height);
     const dataURL = canvas.toDataURL('image/jpeg', 0.92);
-
-    // Apply to target
-    if (cropKind==='profile'){
-      document.getElementById('profileInput').value = dataURL;
-      document.getElementById('profileImg').src = dataURL;
-    } else if (cropKind==='banner'){
-      document.getElementById('bannerInput').value = dataURL;
-      const ct = document.querySelector('.card-top');
-      ct.style.backgroundImage = `linear-gradient(135deg, rgba(127,90,240,.2), rgba(255,128,191,.2)), url("${dataURL}")`;
-      ct.style.backgroundPosition = "center";
-      ct.style.backgroundSize = "cover";
-    } else if (cropKind==='bg'){
-      document.getElementById('bgInput').value = dataURL;
-      document.body.style.backgroundImage = `url("${dataURL}")`;
-      document.body.style.backgroundPosition = "center";
-      document.body.style.backgroundSize = "cover";
-    }
-    // Re-render config so it persists in local storage/draft
-    try { render(collectForm()); saveDraftDebounced(); } catch(_){}
+    try{ onDone(dataURL); }catch{}
   }
 
-  // Public entry
-  window.__openCropModal = openCrop;
+  // expose
+  window.__openCrop = openModal;
 })();
-
 
 
   /* ===== 강력 로딩 컨트롤러 (최소 표시 + 최장 타임아웃) ===== */
@@ -825,39 +715,6 @@ function __setAlpha(color, pct){ const v=__parseRGBA(color); v[3]=Math.max(0,Mat
   const bgFile=$("#bgFile"), bannerFile=$("#bannerFile"), profileFile=$("#profileFile");
   const loadingBgPicker=$("#loadingBgPicker"), loadingDotPicker=$("#loadingDotPicker");
   const overlayColorInput=$("#overlayColorInput"), overlayColorPicker=$("#overlayColorPicker");
-
-// === Overlay/shadow alpha sliders ===
-const overlayAlphaRange = document.getElementById('overlayAlphaRange');
-const overlayAlphaVal = document.getElementById('overlayAlphaVal');
-const shadowAlphaRange = document.getElementById('shadowAlphaRange');
-const shadowAlphaVal = document.getElementById('shadowAlphaVal');
-
-function syncOverlayAlpha(){
-  if (!overlayAlphaRange) return;
-  const base = overlayColorInput.value.trim() || DEFAULTS.overlayColor;
-  overlayAlphaVal.textContent = overlayAlphaRange.value;
-  overlayColorInput.value = __setAlpha(base, parseInt(overlayAlphaRange.value,10));
-  try { render(collectForm()); saveDraftDebounced(); } catch(_){}
-}
-function syncShadowAlpha(){
-  if (!shadowAlphaRange) return;
-  const base = cardShadowColorInput.value.trim() || DEFAULTS.cardShadowColor;
-  shadowAlphaVal.textContent = shadowAlphaRange.value;
-  cardShadowColorInput.value = __setAlpha(base, parseInt(shadowAlphaRange.value,10));
-  try { render(collectForm()); saveDraftDebounced(); } catch(_){}
-}
-if (overlayAlphaRange){ overlayAlphaRange.addEventListener('input', syncOverlayAlpha); }
-if (shadowAlphaRange){ shadowAlphaRange.addEventListener('input', syncShadowAlpha); }
-// Initialize slider values from current inputs
-if (overlayAlphaRange){
-  const a = Math.round((__parseRGBA(overlayColorInput.value||DEFAULTS.overlayColor)[3]||1)*100);
-  overlayAlphaRange.value = a; overlayAlphaVal.textContent = a;
-}
-if (shadowAlphaRange){
-  const a2 = Math.round((__parseRGBA(cardShadowColorInput.value||DEFAULTS.cardShadowColor)[3]||1)*100);
-  shadowAlphaRange.value = a2; shadowAlphaVal.textContent = a2;
-}
-
   const cardShadowColorInput=$("#cardShadowColorInput"), cardShadowColorPicker=$("#cardShadowColorPicker");
   const slugInput = document.getElementById("slugInput");
 
