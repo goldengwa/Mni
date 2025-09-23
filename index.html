@@ -1084,5 +1084,44 @@
   })();
   
   </script>
+<style>
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%) translateY(12px);
+    background: rgba(17,17,17,.92);
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    box-shadow: 0 8px 22px rgba(0,0,0,.28);
+    font-size: 13px;
+    font-weight: 700;
+    z-index: 1600;
+    opacity: 0;
+    transition: opacity .18s ease, transform .18s ease;
+    pointer-events: none;
+    max-width: 86vw;
+    text-align: center;
+    line-height: 1.35;
+    word-break: keep-all;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+<script>
+  (function(){
+    let hideTimer = null;
+    window.toast = function(msg, opts){
+      const d = document;
+      let el = d.getElementById('toast');
+      if(!el){ el = d.createElement('div'); el.id='toast'; d.body.appendChild(el); }
+      el.textContent = String(msg || '');
+      el.classList.add('show');
+      clearTimeout(hideTimer);
+      const dur = (opts && opts.duration) || 2200;
+      hideTimer = setTimeout(()=> el.classList.remove('show'), dur);
+    };
+  })();
+</script>
 </body>
 </html>
