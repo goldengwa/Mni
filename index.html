@@ -128,6 +128,15 @@
     .auth-row{ display:grid; grid-template-columns:1fr; gap:8px; margin:8px 0 }
     .auth-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:8px }
     .login-hint{ font-size:12px; color:#6b7280 }
+
+    /* go mine button */
+    .go-mine{
+      position:fixed; top:12px; right:12px; z-index:1400;
+      background:#111; color:#fff; text-decoration:none; font-weight:700; font-size:12px;
+      padding:8px 10px; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,.18);
+      display:none;
+    }
+
     @media (min-width: 900px){
       .settings-panel{ left:50%; right:auto; width:560px; margin-left:-280px; border-radius:16px }
       .sp-body{ max-height:calc(85vh - 56px) }
@@ -153,13 +162,16 @@
     </div>
   </div>
 
+  <!-- go to my panel (only on slug pages) -->
+  <a id="goMineBtn" class="go-mine" href="https://mynameis.r-e.kr/">내 패널로 가기</a>
+
   <!-- floating buttons -->
   <div class="fab">
     <button class="auth-toggle" id="authToggle" title="로그인/로그아웃" aria-label="로그인">👤</button>
     <button class="settings-toggle" id="settingsToggle" title="설정 열기/닫기" aria-label="설정">⚙️</button>
   </div>
 
-  <!-- settings panel -->
+  <!-- settings panel (원본 유지) -->
   <aside class="settings-panel" id="settingsPanel" aria-label="설정 패널">
     <div class="sp-head">
       <div class="sp-title">패널 설정</div>
@@ -172,6 +184,7 @@
       </div>
     </div>
     <div class="sp-body">
+      <!-- (패널 내부 폼 원본 그대로) -->
       <div class="grid">
         <div class="row-2">
           <div>
@@ -263,7 +276,7 @@
             <input id="slugInput" type="text" placeholder="예: yunha, 0yunha1, my-name" style="flex:1"/>
             <button class="btn-small btn-primary" id="publishSlugBtn">게시</button>
           </div>
-          <div class="note">공유: <code>https://mynameis.r-e.kr/(슬러그) 패널 업데이트 시 다시 게시해주세요.</code> </div>
+          <div class="note">공유: <code>https://mynameis.r-e.kr/(슬러그)</code> 패널 업데이트 시 다시 게시해주세요.</div>
         </div>
 
         <div class="hr"></div>
@@ -390,13 +403,30 @@
     const SUPABASE_URL = "https://jutgrivlikaflkhbdhar.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp1dGdyaXZsaWthZmxraGJkaGFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxNTk1MTEsImV4cCI6MjA3MTczNTUxMX0.qGsSDiqtzoUYWvWruRGMzzorDVQAO0MLEpIpgX_BpP8";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-if (window.supabase && typeof supabase.auth?.onAuthStateChange === "function" && typeof loadFromAccountRemote === "function") {
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-      try { await loadFromAccountRemote(); } catch(e) {}
+
+    // ── 슬러그 뷰 여부 전역 플래그 ─────────────────────────────
+    function getCurrentSlugFromURL(){
+      const u = new URL(location.href);
+      let s = u.searchParams.get("s");
+      if(!s){
+        const segs = location.pathname.split('/').filter(Boolean);
+        const last = segs[segs.length-1] || "";
+        const m = last.match(/^@?([A-Za-z0-9_-]{3,32})$/);
+        if (m) s = m[1];
+      }
+      return s || "";
     }
-  });
-}
+    let VIEWING_SLUG = !!getCurrentSlugFromURL();
+
+    // 슬러그 페이지면 자동 계정 로딩을 막는다
+    if (window.supabase && typeof supabase.auth?.onAuthStateChange === "function") {
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        // 슬러그 페이지에선 자동 불러오기 금지 (뷰가 덮어써지지 않도록)
+        if (!VIEWING_SLUG && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
+          try { await loadFromAccountRemote?.(); } catch(e) {}
+        }
+      });
+    }
 
     const CLOUD_READY = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("<YOUR-") && !SUPABASE_ANON_KEY.includes("<YOUR-");
     window.addEventListener("DOMContentLoaded", ()=>{
@@ -406,15 +436,20 @@ if (window.supabase && typeof supabase.auth?.onAuthStateChange === "function" &&
         document.getElementById("loadFromAccountBtn").style.display="none";
         document.getElementById("createShortBtn").style.display="none";
       }
+      // 우상단 "내 패널로 가기" 버튼 표시 제어
+      const gm = document.getElementById("goMineBtn");
+      if (VIEWING_SLUG) gm.style.display = "inline-block";
+      else gm.style.display = "none";
     });
-document.addEventListener("DOMContentLoaded", async () => {
-  if (!window.supabase || typeof supabase.auth?.getSession !== "function" || typeof loadFromAccountRemote !== "function") return;
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) { await loadFromAccountRemote().catch(()=>{}); }
-  } catch {}
-});
 
+    // 페이지 로드시: 루트일 때만 세션이 있으면 내 계정 불러오기
+    document.addEventListener("DOMContentLoaded", async () => {
+      if (VIEWING_SLUG) return; // 슬러그 페이지는 건드리지 않음
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) { await loadFromAccountRemote?.().catch(()=>{}); }
+      } catch {}
+    });
   </script>
 
   <script>
@@ -443,8 +478,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const isSafeUrl = u => /^https?:\/\//i.test(u||"") || /^data:image\/[a-zA-Z]+;base64,/i.test(u||"");
   const isDataImage = u => /^data:image\/[a-zA-Z]+;base64,/i.test(u||"");
   const LS_KEY = "panelConfig.v2";
-  const SLUG_KEY = "panel.slug";          // 저장된 내 슬러그
-  const DRAFT_KEY = "panelDraft.v1";      // 임시저장(세션)
+  const SLUG_KEY = "panel.slug";
+  const DRAFT_KEY = "panelDraft.v1";
   const LENGTH_LIMIT = 1800;
 
   function encodeCfg(cfg){
@@ -460,13 +495,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       const json = new TextDecoder().decode(bytes);
       return JSON.parse(json);
     }catch(e){ return null; }
-  }
-  function cleanCParam(){
-    const u = new URL(location.href);
-    if(u.searchParams.has("c")){
-      u.searchParams.delete("c");
-      history.replaceState(null, "", u);
-    }
   }
 
   const HEX_RE = /^#([0-9a-f]{3}|([0-9a-f]{2}){3})$/i;
@@ -586,8 +614,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const C = document.getElementById("content");
     let closed = false;
 
-    const MIN_SHOW = 2000;   // 최소 2초는 로딩 유지
-    const HARD_MAX = 5000;  // 5초 안에는 무조건 닫기
+    const MIN_SHOW = 2000;
+    const HARD_MAX = 5000;
     const shownAt  = Date.now();
 
     function reallyClose(){
@@ -598,7 +626,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     window.__closeLoading = function(){
       const elapsed = Date.now() - shownAt;
-      const EXTRA_DELAY = 1800;  // 사용자 요청: 계정 설정이 적용된 뒤에도 3초는 더 보여주기
+      const EXTRA_DELAY = 1800;
       const wait = Math.max(MIN_SHOW - elapsed, 0) + EXTRA_DELAY;
       setTimeout(reallyClose, wait);
     };
@@ -621,7 +649,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function openPanel(o=true){ panel.classList.toggle("open", o) }
 
-  /* ===== 자동 임시저장(새로고침/탭 전환 복구용) ===== */
+  /* ===== 자동 임시저장 ===== */
   const saveDraftDebounced = debounce(()=> {
     try{
       const draft = { cfg: collectForm(), panelOpen: panel.classList.contains("open"), ts: Date.now() };
@@ -635,7 +663,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       if(!raw) return;
       const draft = JSON.parse(raw);
       if(!draft || !draft.cfg) return;
-      // 뷰어가 아니라 "편집중" 의도를 존중: panelOpen이 true였을 때만 복구
       if (draft.panelOpen){
         fillForm(draft.cfg);
         render(draft.cfg);
@@ -645,19 +672,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function clearDraft(){ try{ sessionStorage.removeItem(DRAFT_KEY); }catch{} }
-
   function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
 
-  // 패널 토글
-  toggleBtn.addEventListener("click", ()=>{
+  // 패널 토글: 슬러그 페이지에서도 "내 패널"을 강제로 연다
+  toggleBtn.addEventListener("click", async ()=>{
+    const viewingSlug = VIEWING_SLUG;
     if (!currentUser) { alert("패널을 열기 전에 로그인/회원가입(이메일 인증)해주세요."); openAuth(true); return; }
+
+    // 슬러그 페이지라면, 내 계정 설정을 불러와서 편집 패널을 연다
+    if (viewingSlug) {
+      try { await loadFromAccountRemote(); } catch {}
+    }
+
     const savedSlug = localStorage.getItem(SLUG_KEY);
     if (savedSlug) slugInput.value = savedSlug;
     openPanel(!panel.classList.contains("open"));
     saveDraftDebounced();
   });
 
-  // 입력 변화 → 임시저장
   panel.addEventListener("input", saveDraftDebounced);
   panel.addEventListener("change", saveDraftDebounced);
   panel.addEventListener("click", (e)=>{
@@ -800,7 +832,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (CLOUD_READY && currentUser) { await saveToAccountRemote(c); }
     alert("저장되었습니다.");
     openPanel(false);
-    clearDraft(); // 저장 후 임시초안 제거
+    clearDraft();
   });
 
   document.getElementById("resetBtn").addEventListener("click", ()=>{
@@ -859,7 +891,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       const u=new URL(location.href); u.searchParams.delete("c"); history.replaceState(null,"",u);
       alert("계정에 저장된 설정이 없습니다.");
       clearDraft();
-    };
+      return;
+    }
     const cfg = data.data;
     fillForm(cfg); render(cfg); localStorage.setItem(LS_KEY, JSON.stringify(cfg));
     const loadedSlug = cfg?.meta?.slug;
@@ -965,7 +998,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
     currentUser = data.user.email; sessionPill.textContent=`로그인: ${currentUser}`; sessionPill.style.display="";
-    try{ await loadFromAccountRemote(); }catch{}   <!-- ★ 추가: 로그인 직후 계정설정 불러오기 -->
+    // 루트에서만 자동 불러오기 (슬러그 페이지는 보던 사용자 유지)
+    if (!VIEWING_SLUG) { try{ await loadFromAccountRemote(); }catch{} }
     openAuth(false);
   });
   logoutBtn.addEventListener("click", async ()=>{
@@ -989,71 +1023,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     else { currentUser=null; sessionPill.style.display="none"; }
   });
 
-  /* ===== 부팅 (슬러그 로딩 스타일 선반영 + 폴백) ===== */
+  /* ===== 부팅 (슬러그 우선 표시, 루트는 내 계정 우선) ===== */
   (async ()=>{
     const safeClose = window.__closeLoading || (()=>{});
     try {
       const url = new URL(location.href);
 
       function getSlug(){
-        let slug = url.searchParams.get("s");
-        if (!slug) {
-          const segs = location.pathname.split('/').filter(Boolean);
-          const last = segs[segs.length-1] || "";
-          const m = last.match(/^@?([A-Za-z0-9_-]{3,32})$/);
-          if (m) slug = m[1];
-        }
-        return slug;
+        return getCurrentSlugFromURL(); // 동일 로직 사용
       }
 
       const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
-      async function withTimeout(promise, ms){ return await Promise.race([ promise, sleep(ms).then(()=>null) ]); }
-
-      const slug = getSlug();
-      let cfg = null;
-
-      // 1) 로딩 화면 스타일만 먼저 반영(최대 800ms)
-      if (slug && typeof fetchShortByCode === "function") {
-        const early = await withTimeout(fetchShortByCode(slug).catch(()=>null), 800);
-        if (early) applyLoadingStyle(early);
-        cfg = early;
-      }
-
-      // 2) 전체 설정 확보(최대 1200ms)
-      if (!cfg && slug && typeof fetchShortByCode === "function") {
-        cfg = await withTimeout(fetchShortByCode(slug).catch(()=>null), 1200);
-      }
-
-      // 3) ?c 파라미터
-      if (!cfg) {
-        const c = url.searchParams.get("c");
-        if (c) {
-          cfg = decodeCfg(c);
-          try { url.searchParams.delete("c"); history.replaceState(null,"",url); } catch {}
-        }
-      }
-
-      // 4) localStorage
-      if (!cfg) {
-        try{ const raw = localStorage.getItem(LS_KEY); if(raw) cfg = JSON.parse(raw); }catch{}
-      }
-
-      // 5) 기본값
-      if (!cfg) cfg = structuredClone(DEFAULTS);
-
-      // 6) 렌더
-      try { fillForm(cfg); render(cfg); } catch(e){ console.error(e); render(DEFAULTS); }
-
-      // 7) 편집중 복원(세션 임시저장)
-      maybeRestoreDraft();
-
-    } catch (e) {
-      console.error("boot failed:", e);
-      try{ render(DEFAULTS); }catch{}
-    } finally {
-      safeClose();
-    }
-  })();
-  </script>
-</body>
-</html>
+      async function withTimeout(promise, ms){ return await
