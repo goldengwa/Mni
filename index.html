@@ -577,6 +577,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
+
 /* === Minimal crop modal (no other behavior changed) === */
 (function(){
   const modal = document.getElementById('cropModal');
@@ -589,7 +590,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let aspect = 1, kind = null, onDone = null;
   let nat = {w:0,h:0};
-  let box = {x:0,y:0,w:100,h:100};
+  let box = {x:0,y:0,w:100,h:100}; // selection box in STAGE coords (px)
   let start = null;
 
   function getAspectFor(kind){
@@ -608,10 +609,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     img.src = objectURL;
     img.onload=()=>{
       nat = {w: img.naturalWidth, h: img.naturalHeight};
-      const st = stage.getBoundingClientRect();
-      const sw = st.width * 0.7, sh = sw / aspect, mh = st.height * 0.7;
-      let w=sw, h=sh; if(h>mh){ h=mh; w=h*aspect; }
-      box = { x:(st.width-w)/2, y:(st.height-h)/2, w, h };
+      const sw = stage.clientWidth * 0.7, sh = (sw / aspect), mh = stage.clientHeight * 0.7;
+      let w=sw, h=sh; if (h>mh){ h=mh; w=h*aspect; }
+      box = { x:(stage.clientWidth-w)/2, y:(stage.clientHeight-h)/2, w, h };
       draw();
     };
     document.addEventListener('keydown', key);
@@ -624,18 +624,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   function key(e){ if(e.key==='Escape') closeModal(false); if(e.key==='Enter') closeModal(true); }
 
-  function draw(){ sel.style.left = (stage.offsetLeft+box.x)+'px'; sel.style.top=(stage.offsetTop+box.y)+'px'; sel.style.width=box.w+'px'; sel.style.height=box.h+'px'; }
+  function draw(){
+    // sel is absolutely positioned INSIDE #cropStage (position:relative)
+    sel.style.left = box.x + 'px';
+    sel.style.top  = box.y + 'px';
+    sel.style.width  = box.w + 'px';
+    sel.style.height = box.h + 'px';
+  }
   function clamp(){
-    const st = stage.getBoundingClientRect();
-    if(box.x<0) box.x=0; if(box.y<0) box.y=0;
-    if(box.x+box.w>st.width) box.x = st.width - box.w;
-    if(box.y+box.h>st.height) box.y = st.height - box.h;
+    const W = stage.clientWidth, H = stage.clientHeight;
+    if (box.x < 0) box.x = 0;
+    if (box.y < 0) box.y = 0;
+    if (box.x + box.w > W) box.x = W - box.w;
+    if (box.y + box.h > H) box.y = H - box.h;
   }
 
   sel.addEventListener('pointerdown', (e)=>{
     const dir = e.target.dataset?.dir || '';
-    const st = stage.getBoundingClientRect();
-    start = {dir, x0:e.clientX, y0:e.clientY, ...box, st};
+    start = {dir, x0:e.clientX, y0:e.clientY, ...box};
     sel.setPointerCapture(e.pointerId);
     e.preventDefault();
   });
@@ -645,6 +651,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     let {x,y,w,h} = start;
     if (!start.dir){ x += dx; y += dy; }
     else{
+      // fixed aspect resize
       if (start.dir.includes('e')||start.dir.includes('w')){ w = start.w + (start.dir.includes('e')?dx:-dx); h = w/aspect; if(start.dir.includes('n')) y = start.y + (start.h-h); }
       if (start.dir.includes('n')||start.dir.includes('s')){ h = start.h + (start.dir.includes('s')?dy:-dy); w = h*aspect; if(start.dir.includes('w')) x = start.x + (start.w-w); }
     }
@@ -658,17 +665,27 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function applyCrop(){
     if (!nat.w || !nat.h || !onDone) return;
-    const st = stage.getBoundingClientRect();
-    const ir = img.getBoundingClientRect();
-    const scaleX = nat.w / ir.width;
-    const scaleY = nat.h / ir.height;
-    const sx = Math.max(0, (box.x + stage.offsetLeft - ir.left) * scaleX);
-    const sy = Math.max(0, (box.y + stage.offsetTop  - ir.top)  * scaleY);
+    // Compute selection in IMAGE pixels
+    const stageRect = stage.getBoundingClientRect();
+    const imgRect = img.getBoundingClientRect();
+    // selection top-left in page coords:
+    const selLeft = stageRect.left + box.x;
+    const selTop  = stageRect.top  + box.y;
+    // offset between selection and displayed image within stage
+    const offX = selLeft - imgRect.left;
+    const offY = selTop  - imgRect.top;
+    const scaleX = nat.w / Math.max(1, imgRect.width);
+    const scaleY = nat.h / Math.max(1, imgRect.height);
+    const sx = Math.max(0, offX * scaleX);
+    const sy = Math.max(0, offY * scaleY);
     const sw = Math.max(1, box.w * scaleX);
     const sh = Math.max(1, box.h * scaleY);
+
     const canvas = document.createElement('canvas');
-    canvas.width = Math.round(sw); canvas.height = Math.round(sh);
+    canvas.width = Math.round(sw);
+    canvas.height= Math.round(sh);
     const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img, Math.round(sx), Math.round(sy), Math.round(sw), Math.round(sh), 0,0, canvas.width, canvas.height);
     const dataURL = canvas.toDataURL('image/jpeg', 0.92);
     try{ onDone(dataURL); }catch{}
@@ -677,9 +694,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // expose
   window.__openCrop = openModal;
 })();
-
-
-  /* ===== 강력 로딩 컨트롤러 (최소 표시 + 최장 타임아웃) ===== */
+/* ===== 강력 로딩 컨트롤러 (최소 표시 + 최장 타임아웃) ===== */
   (function(){
     const L = document.getElementById("loading");
     const C = document.getElementById("content");
