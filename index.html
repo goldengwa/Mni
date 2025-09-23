@@ -990,6 +990,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       const slug = getSlug();
       let cfg = null;
 
+      // 로그인 세션 확인 (기본 링크에서 비로그인 시 기본 패널 강제)
+      let __hasSession = false;
+      try {
+        const __sess = await supabase.auth.getSession();
+        __hasSession = !!(__sess && __sess.data && __sess.data.session && __sess.data.session.user);
+      } catch(e) { __hasSession = false; }
+
       // ===== View-only when visiting a user slug =====
       const VIEW_ONLY = !!slug;
       if (VIEW_ONLY) {
@@ -1013,8 +1020,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         cfg = await withTimeout(fetchShortByCode(slug).catch(()=>null), 1200);
       }
 
-      // 3) ?c 파라미터 (슬러그 페이지에서는 무시)
-      if (!cfg && !slug) {
+      // 3) ?c 파라미터 (슬러그 페이지에서는 무시 / 비로그인 기본링크에서는 무시)
+      if (!cfg && !slug && __hasSession) {
         const c = url.searchParams.get("c");
         if (c) {
           cfg = decodeCfg(c);
@@ -1022,8 +1029,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       }
 
-      // 4) localStorage (슬러그 페이지에서는 무시)
-      if (!cfg && !slug) {
+      // 4) localStorage (슬러그 페이지에서는 무시 / 비로그인 기본링크에서는 무시)
+      if (!cfg && !slug && __hasSession) {
         try{ const raw = localStorage.getItem(LS_KEY); if(raw) cfg = JSON.parse(raw); }catch{}
       }
 
