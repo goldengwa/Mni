@@ -817,6 +817,11 @@
   document.getElementById("addLinkBtn").addEventListener("click", ()=> { addLinkRow(); saveDraftDebounced(); });
   document.getElementById("previewBtn").addEventListener("click", ()=> { render(collectForm()); saveDraftDebounced(); });
 
+const saveBtnEl = document.getElementById('saveBtn');
+document.getElementById("saveBtn").addEventListener("click", async ()=>{
+  if (saveBtnEl.dataset.busy === "1") return;
+  saveBtnEl.dataset.busy = "1";
+  saveBtnEl.disabled = true;
   document.getElementById("saveBtn").addEventListener("click", async ()=>{
     const c = collectForm();
     localStorage.setItem(LS_KEY, JSON.stringify(c));
@@ -834,6 +839,9 @@
     alert("저장되었습니다.");
     openPanel(false);
     clearDraft();
+
+    saveBtnEl.disabled = false;
+    saveBtnEl.dataset.busy = "0";
   });
 
   document.getElementById("resetBtn").addEventListener("click", ()=>{
