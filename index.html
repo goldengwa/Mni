@@ -1084,26 +1084,5 @@
   })();
   
   </script>
-<script>
-(function(){
-  const once = (el, ev, fn) => {
-    if (!el) return;
-    const k = '__once_' + ev;
-    if (el[k]) return;
-    el.addEventListener(ev, fn);
-    el[k] = true;
-  };
-  once(document.getElementById('saveBtn'), 'click', () => {
-    try { document.getElementById('saveBtn').disabled = true; } catch(e){}
-    // 기존 저장 로직이 이미 addEventListener로 연결돼 있으면 그대로 실행됩니다.
-    // (여기서는 새 로직을 넣지 않음—중복 방지 목적)
-    setTimeout(()=>{ try{ document.getElementById('saveBtn').disabled = false; }catch(e){} }, 1500);
-  });
-  once(document.getElementById('publishSlugBtn'), 'click', () => {
-    try { document.getElementById('publishSlugBtn').disabled = true; } catch(e){}
-    setTimeout(()=>{ try{ document.getElementById('publishSlugBtn').disabled = false; }catch(e){} }, 1500);
-  });
-})();
-</script>
 </body>
 </html>
