@@ -134,37 +134,61 @@
       .sp-body{ max-height:calc(85vh - 56px) }
     }
   
-/* === User-requested hides === */
-#shareLinkBtn, #createShortBtn { display: none !important; }
-/* Hide data URL text fields for images */
-#bgInput, #bannerInput, #profileInput { display: none !important; }
+/* === Requested hides === */
+#shareLinkBtn, #createShortBtn { display:none !important; }
+#bgInput, #bannerInput, #profileInput { display:none !important; }
 
-/* Drag frame guide for image positioning */
-.drag-frame{
-  position:absolute; border:2px dashed rgba(255,255,255,.9);
-  border-radius:10px; pointer-events:auto; display:none;
-  width:60%; height:40%; left:20%; top:20%; z-index:1050;
-  box-shadow:0 0 0 9999px rgba(0,0,0,.08) inset;
+/* === Crop modal === */
+#cropModal {
+  position: fixed; inset: 0; display: none; z-index: 1400;
+  background: rgba(0,0,0,.55);
+  align-items: center; justify-content: center;
 }
-.dragging .drag-frame{ display:block; cursor:move; }
+#cropBox {
+  background: #111; color:#fff; width: min(92vw, 980px); max-height: 90vh;
+  border-radius: 12px; box-shadow: 0 18px 48px rgba(0,0,0,.35);
+  display:flex; flex-direction:column; overflow:hidden;
+}
+#cropHead {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.12); background:#1a1a1a;
+}
+#cropTitle { font-weight:800; font-size:14px }
+#cropClose { background:none; border:none; color:#fff; font-size:18px; cursor:pointer }
 
-  
-/* === Crop box styles === */
-.crop-box{
-  border:2px solid #fff; box-sizing:border-box; border-radius:8px;
+#cropBody {
+  padding: 12px; background:#111; display:flex; justify-content:center; align-items:center;
 }
-.crop-box .h{
+#cropStage {
+  position:relative; width:100%; height: min(64vh, 640px); background:#000;
+  display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:8px;
+}
+#cropImg { max-width: 100%; max-height: 100%; display:block; }
+
+/* selection */
+#selBox {
+  position:absolute; border: 2px solid #fff; border-radius: 8px;
+  box-shadow: 0 0 0 30000px rgba(0,0,0,.45) inset;
+}
+.sel-h {
   position:absolute; width:14px; height:14px; background:#fff; border-radius:50%;
   margin:-7px 0 0 -7px; box-shadow:0 2px 6px rgba(0,0,0,.35);
 }
-.crop-box .h-nw{ left:0; top:0; cursor:nwse-resize }
-.crop-box .h-n{ left:50%; top:0; cursor:ns-resize }
-.crop-box .h-ne{ left:100%; top:0; cursor:nesw-resize }
-.crop-box .h-e{ left:100%; top:50%; cursor:ew-resize }
-.crop-box .h-se{ left:100%; top:100%; cursor:nwse-resize }
-.crop-box .h-s{ left:50%; top:100%; cursor:ns-resize }
-.crop-box .h-sw{ left:0; top:100%; cursor:nesw-resize }
-.crop-box .h-w{ left:0; top:50%; cursor:ew-resize }
+.sel-h.nw{ left:0; top:0; cursor:nwse-resize } .sel-h.n{ left:50%; top:0; cursor:ns-resize }
+.sel-h.ne{ left:100%; top:0; cursor:nesw-resize } .sel-h.e{ left:100%; top:50%; cursor:ew-resize }
+.sel-h.se{ left:100%; top:100%; cursor:nwse-resize } .sel-h.s{ left:50%; top:100%; cursor:ns-resize }
+.sel-h.sw{ left:0; top:100%; cursor:nesw-resize } .sel-h.w{ left:0; top:50%; cursor:ew-resize }
+
+#cropFoot {
+  display:flex; gap:8px; justify-content:flex-end; padding:12px 16px;
+  border-top:1px solid rgba(255,255,255,.12); background:#1a1a1a;
+}
+.crop-btn {
+  background:#fff; color:#111; border:none; border-radius:8px; font-weight:800; font-size:13px;
+  padding:9px 14px; cursor:pointer;
+}
+.crop-btn.secondary { background:transparent; color:#fff; border:1px solid rgba(255,255,255,.2) }
+.note small{ opacity:.8 }
 
   </style>
 </head>
@@ -176,7 +200,7 @@
 </div>
 <!-- card -->
 <div aria-label="소개 카드" id="content" role="main">
-<div class="card-top"><div class="drag-frame" id="bannerDragBox" title="드래그하여 배너 위치 조정"></div>
+<div class="card-top">
 <img alt="프로필" id="profileImg" src="https://img.freepik.com/premium-photo/abstract-background-design-hd-olive-green-color_851755-74064.jpg?semt=ais_hybrid&amp;w=740&amp;q=80"/>
 </div>
 <div class="card-bottom">
@@ -445,9 +469,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     loadingDot: "#5865F2",
     overlayColor: "rgba(255,255,255,0.35)",
     cardShadowColor: "rgba(0,0,0,0.25)",
-    backgroundPos: "50% 50%", backgroundZoom: 100,
-    bannerPos: "50% 50%", bannerZoom: 100,
-    profilePos: "50% 50%", profileScale: 1,
     tags: [
       { text:"마이네임이즈", color:"tag-blue",  shadowColor:"" },
       { text:"소개페이지",   color:"tag-yellow",shadowColor:"" },
@@ -545,17 +566,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.querySelectorAll(".dot-loader span").forEach(s=>{ if(cfg.loadingDot) s.style.background = cfg.loadingDot; });
 
     document.body.style.backgroundImage = `url("${cfg.backgroundUrl}")`;
-    document.body.style.backgroundPosition = cfg.backgroundPos || "50% 50%";
-    document.body.style.backgroundSize = ((cfg.backgroundZoom||100)) + "% auto";
     $(".card-top").style.backgroundImage = `
       linear-gradient(135deg, rgba(127,90,240,.2), rgba(255,128,191,.2)),
       url("${cfg.bannerUrl}")
     `;
-    $(".card-top").style.backgroundPosition = cfg.bannerPos || "50% 50%";
-    $(".card-top").style.backgroundSize = ((cfg.bannerZoom||100)) + "% auto";
     $("#profileImg").src = cfg.profileUrl || "";
-    $("#profileImg").style.objectPosition = cfg.profilePos || "50% 50%";
-    $("#profileImg").style.transform = "translateX(-50%) scale(" + (cfg.profileScale||1) + ")";
     $("#displayName").textContent = cfg.name || "";
 
     const tw = $("#tagsWrap"); tw.innerHTML = "";
@@ -605,228 +620,172 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
-/* === Alpha slider helpers === */
-function parseColorToRgba(c){
+/* === Color alpha helpers === */
+function __parseRGBA(c){
   c = (c||"").trim();
   if(/^#/.test(c)){
-    let h = c.slice(1);
-    if(h.length===3) h = h.split('').map(x=>x+x).join('');
-    const n = parseInt(h,16);
-    const r=(n>>16)&255, g=(n>>8)&255, b=n&255;
-    return [r,g,b,1];
+    let h = c.slice(1); if(h.length===3) h = h.split('').map(x=>x+x).join('');
+    const n = parseInt(h,16); return [(n>>16)&255,(n>>8)&255,(n)&255,1];
   }
-  const m = c.match(/rgba?\((\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(0|1|0?\.\d+))?\)/i);
-  if(m){ return [parseInt(m[1]),parseInt(m[2]),parseInt(m[3]), m[4]!==undefined ? parseFloat(m[4]) : 1]; }
+  const m = c.match(/rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(0|1|0?\.\d+))?\s*\)/i);
+  if(m) return [parseInt(m[1]),parseInt(m[2]),parseInt(m[3]), m[4]!==undefined?parseFloat(m[4]):1];
   return [255,255,255,1];
 }
-function rgbaToString([r,g,b,a]){ return `rgba(${r},${g},${b},${Math.max(0,Math.min(1,a))})`; }
-function setAlphaOnColor(color, alphaPct){
-  const rgba = parseColorToRgba(color);
-  rgba[3] = Math.max(0, Math.min(1, alphaPct/100));
-  return rgbaToString(rgba);
-}
+function __rgbaStr([r,g,b,a]){ return `rgba(${r},${g},${b},${Math.max(0,Math.min(1,a))})`; }
+function __setAlpha(color, pct){ const v=__parseRGBA(color); v[3]=Math.max(0,Math.min(1,pct/100)); return __rgbaStr(v); }
 
-/* === Drag-to-position (banner/body/profile) === */
-let __dragTarget = null;
-let __dragKind = null; // 'banner' | 'bg' | 'profile'
-let __dragRoot = null;
+/* === Crop modal core === */
+(function(){
+  const modal = document.getElementById('cropModal');
+  const img = document.getElementById('cropImg');
+  const stage = document.getElementById('cropStage');
+  const sel = document.getElementById('selBox');
+  const btnClose = document.getElementById('cropClose');
+  const btnCancel = document.getElementById('cropCancel');
+  const btnApply = document.getElementById('cropApply');
 
-function beginBannerDrag(){
-  __dragKind = 'banner';
-  __dragRoot = document.querySelector('.card-top');
-  document.body.classList.add('dragging');
-}
-function endAnyDrag(){
-  document.body.classList.remove('dragging');
-  __dragKind = null; __dragRoot = null;
-}
+  let cropKind = null; // 'banner' | 'bg' | 'profile'
+  let imgNatural = {w:0,h:0};
+  let selBox = {x:0,y:0,w:100,h:100}; // in stage coords
+  let startState = null;
+  let aspect = 1;
 
-function handlePointerMove(e){
-  if(!__dragKind || !__dragRoot) return;
-  const rect = __dragRoot.getBoundingClientRect();
-  const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-  const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-  const pos = `${(x*100).toFixed(1)}% ${(y*100).toFixed(1)}%`;
-  if(__dragKind==='banner'){
-    __dragRoot.style.backgroundPosition = pos;
-  } else if(__dragKind==='bg'){
-    document.body.style.backgroundPosition = pos;
-  } else if(__dragKind==='profile'){
-    const img = document.getElementById('profileImg');
-    img.style.objectPosition = pos;
+  function openCrop(objectURL, kind){
+    cropKind = kind;
+    aspect = (kind==='profile') ? 1 :
+             (kind==='banner' ? (__getCardTopAspect()||2.5) :
+              (__getWindowAspect()|| (16/9)));
+    modal.style.display='flex';
+    img.src = objectURL;
+    img.onload = ()=>{
+      imgNatural = {w: img.naturalWidth, h: img.naturalHeight};
+      // fit selection to 70% of stage with fixed aspect
+      const st = stage.getBoundingClientRect();
+      const sw = st.width * 0.7, sh = sw / aspect;
+      const maxH = st.height * 0.7;
+      let w = sw, h = sh;
+      if (h > maxH){ h = maxH; w = h*aspect; }
+      selBox.w = w; selBox.h = h;
+      selBox.x = (st.width - w)/2; selBox.y = (st.height - h)/2;
+      drawSel();
+    };
+    document.addEventListener('keydown', keyHandler);
   }
-}
-
-function attachDragHandlers(){
-  const banner = document.querySelector('.card-top');
-  const dragBox = document.getElementById('bannerDragBox');
-  if (banner && dragBox){
-    dragBox.addEventListener('pointerdown', (e)=>{ e.preventDefault(); beginBannerDrag(); });
+  function closeCrop(apply){
+    if (apply) applyCrop();
+    modal.style.display='none';
+    img.src=''; cropKind=null; startState=null;
+    document.removeEventListener('keydown', keyHandler);
   }
-  window.addEventListener('pointermove', handlePointerMove);
-  window.addEventListener('pointerup', endAnyDrag);
-}
+  function keyHandler(e){
+    if (e.key==='Escape') closeCrop(false);
+    if (e.key==='Enter') closeCrop(true);
+  }
+  btnClose.addEventListener('click', ()=>closeCrop(false));
+  btnCancel.addEventListener('click', ()=>closeCrop(false));
+  btnApply.addEventListener('click', ()=>closeCrop(true));
 
-/* Start drag mode automatically right after a new file is chosen */
-function afterBannerSelected(){
-  const dragBox = document.getElementById('bannerDragBox');
-  if (dragBox){ dragBox.style.display='block'; }
-  beginBannerDrag();
-  setTimeout(()=>{ const el=document.querySelector('.drag-frame'); if(el) el.style.display='none'; endAnyDrag(); }, 3500);
-}
-function afterBgSelected(){
-  __dragKind='bg'; __dragRoot=document.body;
-  document.body.classList.add('dragging');
-  setTimeout(()=>{ endAnyDrag(); }, 3500);
-}
-function afterProfileSelected(){
-  __dragKind='profile'; __dragRoot=document.querySelector('.card-top') || document.body;
-  document.body.classList.add('dragging');
-  setTimeout(()=>{ endAnyDrag(); }, 3500);
-}
+  function __getCardTopAspect(){
+    const ct = document.querySelector('.card-top');
+    if (!ct) return null;
+    const r = ct.getBoundingClientRect();
+    return r.width / r.height;
+  }
+  function __getWindowAspect(){
+    return window.innerWidth / Math.max(1, window.innerHeight);
+  }
 
+  function clampSel(){
+    const st = stage.getBoundingClientRect();
+    if (selBox.x<0) selBox.x=0;
+    if (selBox.y<0) selBox.y=0;
+    if (selBox.x+selBox.w>st.width) selBox.x=st.width-selBox.w;
+    if (selBox.y+selBox.h>st.height) selBox.y=st.height-selBox.h;
+  }
+  function drawSel(){
+    const st = stage.getBoundingClientRect();
+    sel.style.left = (stage.offsetLeft + selBox.x) + 'px';
+    sel.style.top  = (stage.offsetTop  + selBox.y) + 'px';
+    sel.style.width  = selBox.w + 'px';
+    sel.style.height = selBox.h + 'px';
+  }
 
+  // dragging/resizing
+  sel.addEventListener('pointerdown', (e)=>{
+    const dir = e.target.dataset?.dir || '';
+    startState = { dir, x0:e.clientX, y0:e.clientY, ...selBox };
+    sel.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  sel.addEventListener('pointermove', (e)=>{
+    if (!startState) return;
+    const dx = e.clientX - startState.x0;
+    const dy = e.clientY - startState.y0;
+    let {x,y,w,h} = startState;
 
-/* === True crop-box drag/resize (pan+zoom control) === */
-let __cropMode = null;  // 'banner' | 'bg' | 'profile'
-let __cropTargetEl = null;
-let __cropArea = null, __cropBox = null, __cropOverlay = null;
-let __start = null;
-let __box = {x:0,y:0,w:0,h:0}; // relative to area rect in pixels
-
-function __initCropEls(){
-  __cropOverlay = document.getElementById('cropOverlay');
-  __cropArea = document.getElementById('cropArea');
-  __cropBox = document.getElementById('cropBox');
-}
-
-function __rect(el){
-  const r = el.getBoundingClientRect();
-  return {x:r.left, y:r.top, w:r.width, h:r.height};
-}
-
-function __setBox(x,y,w,h){
-  const ar = __rect(__cropArea);
-  __box.x = Math.max(0, Math.min(ar.w-10, x));
-  __box.y = Math.max(0, Math.min(ar.h-10, y));
-  __box.w = Math.max(30, Math.min(ar.w-__box.x, w));
-  __box.h = Math.max(30, Math.min(ar.h-__box.y, h));
-  __cropBox.style.left = (ar.x + __box.x) + 'px';
-  __cropBox.style.top  = (ar.y + __box.y) + 'px';
-  __cropBox.style.width  = __box.w + 'px';
-  __cropBox.style.height = __box.h + 'px';
-}
-
-function __startCrop(kind){
-  __initCropEls();
-  __cropMode = kind;
-  if (kind==='banner'){ __cropTargetEl = document.querySelector('.card-top'); }
-  else if (kind==='bg'){ __cropTargetEl = document.body; }
-  else if (kind==='profile'){ __cropTargetEl = document.getElementById('profileImg'); }
-  if (!__cropTargetEl) return;
-
-  const tr = __rect(__cropTargetEl);
-  __cropOverlay.style.display = 'block';
-  __cropArea.style.left = tr.x + 'px';
-  __cropArea.style.top = tr.y + 'px';
-  __cropArea.style.width = tr.w + 'px';
-  __cropArea.style.height = tr.h + 'px';
-  __cropBox.style.display = 'block';
-
-  // initial box to 60% of area centered
-  const bw = tr.w * 0.6, bh = tr.h * 0.6;
-  __setBox(tr.w*0.2, tr.h*0.2, bw, bh);
-}
-
-function __endCrop(apply){
-  if (!__cropMode) return;
-  if (apply){
-    const ar = __rect(__cropArea);
-    const cx = __box.x + __box.w/2;
-    const cy = __box.y + __box.h/2;
-    const cxPct = (cx/ar.w)*100;
-    const cyPct = (cy/ar.h)*100;
-    const scale = (ar.w/__box.w); // width-based zoom
-    if (__cropMode==='banner'){
-      const el = document.querySelector('.card-top');
-      el.style.backgroundPosition = cxPct.toFixed(1)+'% '+cyPct.toFixed(1)+'%';
-      el.style.backgroundSize = (scale*100).toFixed(1)+'% auto';
-    } else if (__cropMode==='bg'){
-      document.body.style.backgroundPosition = cxPct.toFixed(1)+'% '+cyPct.toFixed(1)+'%';
-      document.body.style.backgroundSize = (scale*100).toFixed(1)+'% auto';
-    } else if (__cropMode==='profile'){
-      const img = document.getElementById('profileImg');
-      img.style.objectPosition = cxPct.toFixed(1)+'% '+cyPct.toFixed(1)+'%';
-      img.style.transform = 'translateX(-50%) scale(' + scale.toFixed(3) + ')';
+    if (!startState.dir){
+      x += dx; y += dy;
+    } else {
+      // fixed aspect resizing
+      if (startState.dir.includes('e') || startState.dir.includes('w')){
+        w = startState.w + (startState.dir.includes('e') ? dx : -dx);
+        h = w / aspect;
+        if (startState.dir.includes('n')){ y = startState.y + (startState.h - h); }
+      }
+      if (startState.dir.includes('n') || startState.dir.includes('s')){
+        h = startState.h + (startState.dir.includes('s') ? dy : -dy);
+        w = h * aspect;
+        if (startState.dir.includes('w')){ x = startState.x + (startState.w - w); }
+      }
     }
-  }
-  __cropOverlay.style.display = 'none';
-  __cropBox.style.display = 'none';
-  __cropMode = null;
-}
-
-function __onPointerDown(e){
-  if (!__cropMode) return;
-  const target = e.target;
-  const ar = __rect(__cropArea);
-  const br = __rect(__cropBox);
-  const offsetX = e.clientX - br.x;
-  const offsetY = e.clientY - br.y;
-  const dir = target.dataset ? target.dataset.dir : null;
-  __start = {originX: br.x, originY: br.y, w: br.w, h: br.h, offX: offsetX, offY: offsetY, dir, startX: e.clientX, startY: e.clientY, ar};
-  e.preventDefault();
-}
-
-function __onPointerMove(e){
-  if (!__start) return;
-  const dx = e.clientX - __start.startX;
-  const dy = e.clientY - __start.startY;
-  let x = __start.originX - __start.ar.x;
-  let y = __start.originY - __start.ar.y;
-  let w = __start.w;
-  let h = __start.h;
-  const dir = __start.dir;
-
-  if (!dir){
-    // drag move
-    x = (e.clientX - __start.offX) - __start.ar.x;
-    y = (e.clientY - __start.offY) - __start.ar.y;
-  } else {
-    // resize
-    if (dir.indexOf('w')>=0){ x += dx; w -= dx; }
-    if (dir.indexOf('e')>=0){ w += dx; }
-    if (dir.indexOf('n')>=0){ y += dy; h -= dy; }
-    if (dir.indexOf('s')>=0){ h += dy; }
-  }
-  __setBox(x,y,w,h);
-}
-
-function __onPointerUp(e){
-  __start = null;
-}
-
-function __bindCropEvents(){
-  __initCropEls();
-  const box = __cropBox, overlay = __cropOverlay;
-  if (!box || !overlay) return;
-  overlay.addEventListener('pointerdown', (e)=>{
-    // click outside box => close without apply
-    if (e.target.id==='cropShade') __endCrop(false);
+    selBox = {x,y,w:Math.max(40,w),h:Math.max(40,h)};
+    clampSel(); drawSel();
   });
-  box.addEventListener('pointerdown', __onPointerDown);
-  window.addEventListener('pointermove', __onPointerMove);
-  window.addEventListener('pointerup', __onPointerUp);
-  window.addEventListener('keydown', (e)=>{
-    if (!__cropMode) return;
-    if (e.key==='Escape') __endCrop(false);
-    if (e.key==='Enter') __endCrop(true);
-  });
-}
+  sel.addEventListener('pointerup', ()=>{ startState=null; });
 
-/* Trigger crop after selecting files */
-function afterBannerSelected(){ __bindCropEvents(); __startCrop('banner'); }
-function afterBgSelected(){ __bindCropEvents(); __startCrop('bg'); }
-function afterProfileSelected(){ __bindCropEvents(); __startCrop('profile'); }
+  function applyCrop(){
+    if (!imgNatural.w || !imgNatural.h) return;
+    // Compute selection rect in image pixel coords
+    const st = stage.getBoundingClientRect();
+    const imgRect = img.getBoundingClientRect();
+    // Get scale from displayed image to natural size
+    const scaleX = imgNatural.w / imgRect.width;
+    const scaleY = imgNatural.h / imgRect.height;
+    const sx = Math.max(0, (selBox.x + stage.offsetLeft - imgRect.left) * scaleX);
+    const sy = Math.max(0, (selBox.y + stage.offsetTop  - imgRect.top)  * scaleY);
+    const sw = Math.max(1, selBox.w * scaleX);
+    const sh = Math.max(1, selBox.h * scaleY);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(sw);
+    canvas.height= Math.round(sh);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, Math.round(sx), Math.round(sy), Math.round(sw), Math.round(sh), 0,0, canvas.width, canvas.height);
+    const dataURL = canvas.toDataURL('image/jpeg', 0.92);
+
+    // Apply to target
+    if (cropKind==='profile'){
+      document.getElementById('profileInput').value = dataURL;
+      document.getElementById('profileImg').src = dataURL;
+    } else if (cropKind==='banner'){
+      document.getElementById('bannerInput').value = dataURL;
+      const ct = document.querySelector('.card-top');
+      ct.style.backgroundImage = `linear-gradient(135deg, rgba(127,90,240,.2), rgba(255,128,191,.2)), url("${dataURL}")`;
+      ct.style.backgroundPosition = "center";
+      ct.style.backgroundSize = "cover";
+    } else if (cropKind==='bg'){
+      document.getElementById('bgInput').value = dataURL;
+      document.body.style.backgroundImage = `url("${dataURL}")`;
+      document.body.style.backgroundPosition = "center";
+      document.body.style.backgroundSize = "cover";
+    }
+    // Re-render config so it persists in local storage/draft
+    try { render(collectForm()); saveDraftDebounced(); } catch(_){}
+  }
+
+  // Public entry
+  window.__openCropModal = openCrop;
+})();
 
 
 
@@ -866,45 +825,41 @@ function afterProfileSelected(){ __bindCropEvents(); __startCrop('profile'); }
   const bgFile=$("#bgFile"), bannerFile=$("#bannerFile"), profileFile=$("#profileFile");
   const loadingBgPicker=$("#loadingBgPicker"), loadingDotPicker=$("#loadingDotPicker");
   const overlayColorInput=$("#overlayColorInput"), overlayColorPicker=$("#overlayColorPicker");
+
+// === Overlay/shadow alpha sliders ===
+const overlayAlphaRange = document.getElementById('overlayAlphaRange');
+const overlayAlphaVal = document.getElementById('overlayAlphaVal');
+const shadowAlphaRange = document.getElementById('shadowAlphaRange');
+const shadowAlphaVal = document.getElementById('shadowAlphaVal');
+
+function syncOverlayAlpha(){
+  if (!overlayAlphaRange) return;
+  const base = overlayColorInput.value.trim() || DEFAULTS.overlayColor;
+  overlayAlphaVal.textContent = overlayAlphaRange.value;
+  overlayColorInput.value = __setAlpha(base, parseInt(overlayAlphaRange.value,10));
+  try { render(collectForm()); saveDraftDebounced(); } catch(_){}
+}
+function syncShadowAlpha(){
+  if (!shadowAlphaRange) return;
+  const base = cardShadowColorInput.value.trim() || DEFAULTS.cardShadowColor;
+  shadowAlphaVal.textContent = shadowAlphaRange.value;
+  cardShadowColorInput.value = __setAlpha(base, parseInt(shadowAlphaRange.value,10));
+  try { render(collectForm()); saveDraftDebounced(); } catch(_){}
+}
+if (overlayAlphaRange){ overlayAlphaRange.addEventListener('input', syncOverlayAlpha); }
+if (shadowAlphaRange){ shadowAlphaRange.addEventListener('input', syncShadowAlpha); }
+// Initialize slider values from current inputs
+if (overlayAlphaRange){
+  const a = Math.round((__parseRGBA(overlayColorInput.value||DEFAULTS.overlayColor)[3]||1)*100);
+  overlayAlphaRange.value = a; overlayAlphaVal.textContent = a;
+}
+if (shadowAlphaRange){
+  const a2 = Math.round((__parseRGBA(cardShadowColorInput.value||DEFAULTS.cardShadowColor)[3]||1)*100);
+  shadowAlphaRange.value = a2; shadowAlphaVal.textContent = a2;
+}
+
   const cardShadowColorInput=$("#cardShadowColorInput"), cardShadowColorPicker=$("#cardShadowColorPicker");
   const slugInput = document.getElementById("slugInput");
-
-  // === Overlay/shadow alpha ranges ===
-  const overlayAlphaRange = document.getElementById('overlayAlphaRange');
-  const overlayAlphaVal = document.getElementById('overlayAlphaVal');
-  const shadowAlphaRange = document.getElementById('shadowAlphaRange');
-  const shadowAlphaVal = document.getElementById('shadowAlphaVal');
-
-  function syncOverlayAlpha(){
-    if (!overlayAlphaRange) return;
-    const base = overlayColorInput.value.trim() || DEFAULTS.overlayColor;
-    overlayAlphaVal.textContent = overlayAlphaRange.value;
-    overlayColorInput.value = setAlphaOnColor(base, parseInt(overlayAlphaRange.value,10));
-    render(collectForm()); saveDraftDebounced();
-  }
-  function syncShadowAlpha(){
-    if (!shadowAlphaRange) return;
-    const base = cardShadowColorInput.value.trim() || DEFAULTS.cardShadowColor;
-    shadowAlphaVal.textContent = shadowAlphaRange.value;
-    cardShadowColorInput.value = setAlphaOnColor(base, parseInt(shadowAlphaRange.value,10));
-    render(collectForm()); saveDraftDebounced();
-  }
-  if (overlayAlphaRange){ overlayAlphaRange.addEventListener('input', syncOverlayAlpha); }
-  if (shadowAlphaRange){ shadowAlphaRange.addEventListener('input', syncShadowAlpha); }
-
-  // Initialize slider positions from current colors
-  if (overlayAlphaRange){
-    const a = Math.round((parseColorToRgba(overlayColorInput.value||DEFAULTS.overlayColor)[3]||1)*100);
-    overlayAlphaRange.value = a; overlayAlphaVal.textContent = a;
-  }
-  if (shadowAlphaRange){
-    const a2 = Math.round((parseColorToRgba(cardShadowColorInput.value||DEFAULTS.cardShadowColor)[3]||1)*100);
-    shadowAlphaRange.value = a2; shadowAlphaVal.textContent = a2;
-  }
-
-  // === Dragging hooks ===
-  attachDragHandlers();
-
 
   function openPanel(o=true){ panel.classList.toggle("open", o) }
 
@@ -1038,12 +993,6 @@ function afterProfileSelected(){ __bindCropEvents(); __startCrop('profile'); }
       loadingDot: loadingDotInput.value.trim() || DEFAULTS.loadingDot,
       overlayColor: overlayColorInput.value.trim() || DEFAULTS.overlayColor,
       cardShadowColor: cardShadowColorInput.value.trim() || DEFAULTS.cardShadowColor,
-      backgroundPos: (document.body.style.backgroundPosition||"50% 50%"),
-      backgroundZoom: (parseFloat((document.body.style.backgroundSize||"100%").split("%")[0])||100),
-      bannerPos: ($(".card-top").style.backgroundPosition||"50% 50%"),
-      bannerZoom: (parseFloat( ($(".card-top").style.backgroundSize||"100%").split("%")[0])||100),
-      profilePos: ($("#profileImg").style.objectPosition||"50% 50%"),
-      profileScale: (parseFloat((/scale\(([^)]+)\)/.exec($("#profileImg").style.transform)||[])[1]) || 1),
       tags, buttons
     };
 
@@ -1064,9 +1013,9 @@ function afterProfileSelected(){ __bindCropEvents(); __startCrop('profile'); }
       });
     });
   }
-  bindFileInput(bgFile, bgInput, ()=>{ afterBgSelected(); });
-  bindFileInput(bannerFile, bannerInput, ()=>{ afterBannerSelected(); });
-  bindFileInput(profileFile, profileInput, (dataURL)=>{ $("#profileImg").src = dataURL; afterProfileSelected(); });
+  bindFileInput(bgFile, bgInput, ()=>{});
+  bindFileInput(bannerFile, bannerInput, ()=>{});
+  bindFileInput(profileFile, profileInput, (dataURL)=>{ $("#profileImg").src = dataURL; });
 
   loadingBgPicker?.addEventListener("input", e=>{ loadingBgInput.value = e.target.value; render(collectForm()); saveDraftDebounced(); });
   loadingDotPicker?.addEventListener("input", e=>{ loadingDotInput.value = e.target.value; render(collectForm()); saveDraftDebounced(); });
@@ -1400,22 +1349,32 @@ function afterProfileSelected(){ __bindCropEvents(); __startCrop('profile'); }
 </script>
 
 
-<!-- crop overlay ui -->
-<div id="cropOverlay" style="position:fixed;inset:0;display:none;z-index:1400;">
-  <div id="cropShade" style="position:absolute;inset:0;background:rgba(0,0,0,.35);"></div>
-  <div id="cropArea" style="position:absolute;box-shadow:0 0 0 9999px rgba(0,0,0,.35) inset;"></div>
-  <div id="cropBox" class="crop-box" role="region" aria-label="크롭 박스" style="position:absolute;display:none;">
-    <div class="h h-nw" data-dir="nw"></div>
-    <div class="h h-n"  data-dir="n"></div>
-    <div class="h h-ne" data-dir="ne"></div>
-    <div class="h h-e"  data-dir="e"></div>
-    <div class="h h-se" data-dir="se"></div>
-    <div class="h h-s"  data-dir="s"></div>
-    <div class="h h-sw" data-dir="sw"></div>
-    <div class="h h-w"  data-dir="w"></div>
-  </div>
-  <div id="cropHelp" style="position:absolute;left:50%;transform:translateX(-50%);bottom:16px;color:#fff;font-weight:800;background:rgba(0,0,0,.5);padding:6px 10px;border-radius:8px;">
-    박스를 드래그해서 이동 / 모서리를 드래그해서 크기 조절 — Esc로 취소, Enter로 적용
+<!-- crop modal -->
+<div id="cropModal" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
+  <div id="cropBox">
+    <div id="cropHead">
+      <div id="cropTitle">이미지 크롭</div>
+      <button id="cropClose" title="닫기">✕</button>
+    </div>
+    <div id="cropBody">
+      <div id="cropStage">
+        <img id="cropImg" alt="크롭 미리보기"/>
+        <div id="selBox" aria-label="선택 영역" role="region">
+          <div class="sel-h nw" data-dir="nw"></div>
+          <div class="sel-h n"  data-dir="n"></div>
+          <div class="sel-h ne" data-dir="ne"></div>
+          <div class="sel-h e"  data-dir="e"></div>
+          <div class="sel-h se" data-dir="se"></div>
+          <div class="sel-h s"  data-dir="s"></div>
+          <div class="sel-h sw" data-dir="sw"></div>
+          <div class="sel-h w"  data-dir="w"></div>
+        </div>
+      </div>
+    </div>
+    <div id="cropFoot">
+      <button class="crop-btn secondary" id="cropCancel">취소(Esc)</button>
+      <button class="crop-btn" id="cropApply">적용(Enter)</button>
+    </div>
   </div>
 </div>
 
