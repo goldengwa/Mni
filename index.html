@@ -134,54 +134,6 @@
       .sp-body{ max-height:calc(85vh - 56px) }
     }
   </style>
-
-<!-- Cropper.js -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
-
-<style>
-#cropModal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:2000}
-#cropBox{background:#fff;padding:10px;border-radius:8px;max-width:90%;max-height:90%;display:flex;flex-direction:column;gap:10px}
-#cropBox img{max-width:100%;max-height:70vh}
-#cropActions{display:flex;gap:10px;justify-content:flex-end}
-</style>
-
-<div id="cropModal">
-  <div id="cropBox">
-    <img id="cropImage" src=""/>
-    <div id="cropActions">
-      <button id="cropCancel">취소</button>
-      <button id="cropApply">적용</button>
-    </div>
-  </div>
-</div>
-
-<script>
-let cropper=null, cropTarget=null;
-function openCropper(file,targetCb){
-  const reader=new FileReader();
-  reader.onload=e=>{
-    document.getElementById("cropImage").src=e.target.result;
-    document.getElementById("cropModal").style.display="flex";
-    cropTarget=targetCb;
-    cropper=new Cropper(document.getElementById("cropImage"),{aspectRatio:1,viewMode:1});
-  };
-  reader.readAsDataURL(file);
-}
-document.getElementById("cropCancel").onclick=()=>{
-  if(cropper){cropper.destroy();cropper=null;}
-  document.getElementById("cropModal").style.display="none";
-};
-document.getElementById("cropApply").onclick=()=>{
-  if(cropper&&cropTarget){
-    const canvas=cropper.getCroppedCanvas({width:400,height:400});
-    cropTarget(canvas.toDataURL("image/png"));
-  }
-  if(cropper){cropper.destroy();cropper=null;}
-  document.getElementById("cropModal").style.display="none";
-};
-</script>
-
 </head>
 <body>
 <!-- loading -->
@@ -235,17 +187,17 @@ document.getElementById("cropApply").onclick=()=>{
 </div>
 <div class="row">
 <label>배경 사진 (파일 업로드만)</label>
-<input id="bgInput" placeholder="파일 선택만 가능" readonly="" type="text"/ style="display:none">
+<input id="bgInput" placeholder="파일 선택만 가능" readonly="" type="text"/>
 <input accept="image/*" class="color-picker" id="bgFile" type="file"/>
 </div>
 <div class="row">
 <label>배너 사진 (파일 업로드만)</label>
-<input id="bannerInput" placeholder="파일 선택만 가능" readonly="" type="text"/ style="display:none">
+<input id="bannerInput" placeholder="파일 선택만 가능" readonly="" type="text"/>
 <input accept="image/*" class="color-picker" id="bannerFile" type="file"/>
 </div>
 <div class="row">
 <label>프로필 사진 (파일 업로드만)</label>
-<input id="profileInput" placeholder="파일 선택만 가능" readonly="" type="text"/ style="display:none">
+<input id="profileInput" placeholder="파일 선택만 가능" readonly="" type="text"/>
 <input accept="image/*" class="color-picker" id="profileFile" type="file"/>
 </div>
 <!-- 로딩 색상 -->
@@ -267,14 +219,12 @@ document.getElementById("cropApply").onclick=()=>{
 <label>배경 오버레이 색 (CSS Color)</label>
 <input id="overlayColorInput" placeholder="rgba(255,255,255,0.35) / #ffffff80" type="text"/>
 <input class="color-picker" id="overlayColorPicker" type="color"/>
-<input type="range" id="overlayOpacity" min="0" max="100" value="35">
 <div class="note">투명도는 <code>rgba(r,g,b,a)</code> 형태 추천.</div>
 </div>
 <div>
 <label>카드 그림자 색 (CSS Color)</label>
 <input id="cardShadowColorInput" placeholder="rgba(0,0,0,0.25) / #00000040" type="text"/>
 <input class="color-picker" id="cardShadowColorPicker" type="color"/>
-<input type="range" id="shadowOpacity" min="0" max="100" value="25">
 </div>
 </div>
 <div class="hr"></div>
@@ -306,9 +256,9 @@ document.getElementById("cropApply").onclick=()=>{
 <label>공유</label>
 <div class="actions">
 <button class="btn-small" id="previewBtn">미리보기 적용</button>
-
-
-
+<button class="btn-small" id="shareLinkBtn">공유 링크 만들기</button>
+<button class="btn-small btn-primary" id="createShortBtn">짧은 링크 만들기</button>
+<button class="btn-small" id="saveToAccountBtn">계정에 저장(클라우드)</button>
 <button class="btn-small" id="loadFromAccountBtn">계정에서 불러오기</button>
 </div>
 <div class="note">URL이 너무 길면 자동으로 주소에 저장하지 않습니다. 공유는 “짧은 링크”를 사용하세요.</div>
@@ -788,22 +738,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     return cfg;
   }
 
-  
-function bindFileInput(fileEl, targetInput, after){
-  fileEl?.addEventListener("change", e=>{
-    const f=e.target.files?.[0]; if(!f) return;
-    openCropper(f,(dataURL)=>{
-      targetInput.value=dataURL;
-      if(typeof after==="function") after(dataURL);
-      render(collectForm());
-      saveDraftDebounced();
+  function bindFileInput(fileEl, targetInput, after){
+    fileEl?.addEventListener("change", e=>{
+      const f=e.target.files?.[0]; if(!f) return;
+      fileToDataURL(f, (dataURL)=>{
+        targetInput.value = dataURL;
+        if (typeof after === "function") after(dataURL);
+        render(collectForm());
+        saveDraftDebounced();
+      });
     });
-  });
-}
-bindFileInput(bgFile, bgInput, ()=>{});
-bindFileInput(bannerFile, bannerInput, ()=>{});
-bindFileInput(profileFile, profileInput, (dataURL)=>{ $("#profileImg").src = dataURL; });
-
+  }
+  bindFileInput(bgFile, bgInput, ()=>{});
+  bindFileInput(bannerFile, bannerInput, ()=>{});
+  bindFileInput(profileFile, profileInput, (dataURL)=>{ $("#profileImg").src = dataURL; });
 
   loadingBgPicker?.addEventListener("input", e=>{ loadingBgInput.value = e.target.value; render(collectForm()); saveDraftDebounced(); });
   loadingDotPicker?.addEventListener("input", e=>{ loadingDotInput.value = e.target.value; render(collectForm()); saveDraftDebounced(); });
