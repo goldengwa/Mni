@@ -565,6 +565,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     let closed = false;
 
     const MIN_SHOW = 2000;   // 최소 2초는 로딩 유지
+    const HARD_MAX = 5000;  // 5초 안에는 무조건 닫기
     const shownAt  = Date.now();
 
     function reallyClose(){
