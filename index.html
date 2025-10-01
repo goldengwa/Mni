@@ -135,8 +135,8 @@
     }
   </style>
 
-<!-- Cropper.js CSS & JS -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+<!-- Cropper.js -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
 <style>
@@ -786,21 +786,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   
-  function bindFileInput(fileEl, targetInput, after){
-    fileEl?.addEventListener("change", e=>{
-      const f=e.target.files?.[0]; if(!f) return;
-      openCropper(f,(dataURL)=>{
-        targetInput.value=dataURL;
-        if(typeof after==="function") after(dataURL);
-        render(collectForm());
-        saveDraftDebounced();
-      });
+function bindFileInput(fileEl, targetInput, after){
+  fileEl?.addEventListener("change", e=>{
+    const f=e.target.files?.[0]; if(!f) return;
+    openCropper(f,(dataURL)=>{
+      targetInput.value=dataURL;
+      if(typeof after==="function") after(dataURL);
+      render(collectForm());
+      saveDraftDebounced();
     });
-  }
+  });
+}
+bindFileInput(bgFile, bgInput, ()=>{});
+bindFileInput(bannerFile, bannerInput, ()=>{});
+bindFileInput(profileFile, profileInput, (dataURL)=>{ $("#profileImg").src = dataURL; });
 
-  bindFileInput(bgFile, bgInput, ()=>{});
-  bindFileInput(bannerFile, bannerInput, ()=>{});
-  bindFileInput(profileFile, profileInput, (dataURL)=>{ $("#profileImg").src = dataURL; });
 
   loadingBgPicker?.addEventListener("input", e=>{ loadingBgInput.value = e.target.value; render(collectForm()); saveDraftDebounced(); });
   loadingDotPicker?.addEventListener("input", e=>{ loadingDotInput.value = e.target.value; render(collectForm()); saveDraftDebounced(); });
